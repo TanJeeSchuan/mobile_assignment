@@ -4,6 +4,8 @@ import 'package:signature/signature.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 
+import 'signature_input.dart';
+
 // void main() {
 //   runApp(const MyApp());
 // }
@@ -45,12 +47,18 @@ class _DeliveryConfirmationState extends State<DeliveryConfirmation> {
   final List<File> _proofFiles = [];
 
   /// Start editing
-  void _startEditing() {
-    setState(() {
-      _isEditing = true;
-      _backupSignature = _savedSignature; // keep old one
-      _signatureController.clear();
-    });
+  /// Navigate to signature input page
+  Future<void> _startEditing() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const ReceiverSignaturePage()),
+    );
+
+    if (result != null && result is Uint8List) {
+      setState(() {
+        _savedSignature = result; // update with new signature
+      });
+    }
   }
 
   /// Cancel → restore old state

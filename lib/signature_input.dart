@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:signature/signature.dart';
 
+
 void main() {
   runApp(const MyApp());
 }
@@ -13,7 +14,6 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Signature Demo',
       theme: ThemeData(primarySwatch: Colors.blue),
       home: const ReceiverSignaturePage(),
     );
@@ -83,7 +83,7 @@ class _ReceiverSignaturePageState extends State<ReceiverSignaturePage> {
             Stack(
               children: [
                 Container(
-                  height: 250,
+                  height: 400,
                   decoration: BoxDecoration(
                     border: Border.all(
                       color: Colors.grey,
@@ -108,7 +108,7 @@ class _ReceiverSignaturePageState extends State<ReceiverSignaturePage> {
               ],
             ),
 
-            const SizedBox(height: 30),
+            const SizedBox(height: 50),
 
             // Buttons
             Row(
