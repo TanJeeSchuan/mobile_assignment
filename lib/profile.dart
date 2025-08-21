@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
 
-void main() {
-  runApp(const StaffDetailsApp());
-}
+// void main() {
+//   runApp(const StaffDetailsApp());
+// }
 
-class StaffDetailsApp extends StatelessWidget {
-  const StaffDetailsApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: StaffDetailsPage(),
-    );
-  }
-}
+// class StaffDetailsApp extends StatelessWidget {
+//   const StaffDetailsApp({super.key});
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     return const MaterialApp(
+//       debugShowCheckedModeBanner: false,
+//       home: StaffDetailsPage(),
+//     );
+//   }
+// }
 
 class StaffDetailsPage extends StatelessWidget {
   const StaffDetailsPage({super.key});

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_assignment/AppColors.dart';
+import 'package:mobile_assignment/profile.dart';
 
 import 'Defines.dart';
 import 'GeneralWidgets.dart';
@@ -18,7 +19,9 @@ class Dashboard extends StatelessWidget {
           actions: <Widget>[
             IconButton(
               onPressed: (){
-                //TODO Navigate to User Profile
+                Navigator.push(context, MaterialPageRoute<void>(
+                  builder: (context) => const StaffDetailsPage(),
+                ),);
               },
               icon: const Icon(Icons.account_circle_sharp),
             )
