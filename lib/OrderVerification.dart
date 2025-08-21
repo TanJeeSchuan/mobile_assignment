@@ -4,23 +4,23 @@ import 'package:signature/signature.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 
-void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Delivery Confirmation',
-      theme: ThemeData(primarySwatch: Colors.blue),
-      home: const DeliveryConfirmation(),
-    );
-  }
-}
+// void main() {
+//   runApp(const MyApp());
+// }
+//
+// class MyApp extends StatelessWidget {
+//   const MyApp({Key? key}) : super(key: key);
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     return MaterialApp(
+//       debugShowCheckedModeBanner: false,
+//       title: 'Delivery Confirmation',
+//       theme: ThemeData(primarySwatch: Colors.blue),
+//       home: const DeliveryConfirmation(),
+//     );
+//   }
+// }
 
 class DeliveryConfirmation extends StatefulWidget {
   const DeliveryConfirmation({Key? key}) : super(key: key);

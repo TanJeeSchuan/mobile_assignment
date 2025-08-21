@@ -4,6 +4,7 @@ import 'AppColors.dart';
 import 'Defines.dart';
 import 'GeneralWidgets.dart';
 import 'OrderDetail.dart';
+import 'OrderVerification.dart';
 
 class DeliveryCard extends StatelessWidget{
   const DeliveryCard({super.key});
@@ -61,7 +62,14 @@ class DeliveryCard extends StatelessWidget{
                 SizedBox(width: 52,),
                 Expanded(
                     child: ElevatedButton (
-                      onPressed: () {},
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute<void>(
+                            builder: (context) => const DeliveryConfirmation(),
+                          ),
+                        );
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.stepActive, // button background color
                         foregroundColor: Colors.white, // text/icon color
