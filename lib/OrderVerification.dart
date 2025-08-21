@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:typed_data';
 import 'package:signature/signature.dart';
-import 'package:file_picker/file_picker.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 
 void main() {
   runApp(const MyApp());
@@ -41,18 +42,18 @@ class _DeliveryConfirmationState extends State<DeliveryConfirmation> {
   Uint8List? _backupSignature;
   bool _isEditing = false;
 
-  List<Uint8List> _uploadedFiles = [];
+  final List<File> _proofFiles = [];
 
   /// Start editing
   void _startEditing() {
     setState(() {
       _isEditing = true;
-      _backupSignature = _savedSignature;
+      _backupSignature = _savedSignature; // keep old one
       _signatureController.clear();
     });
   }
 
-  /// Cancel editing
+  /// Cancel → restore old state
   void _cancelEditing() {
     setState(() {
       _isEditing = false;
@@ -66,37 +67,30 @@ class _DeliveryConfirmationState extends State<DeliveryConfirmation> {
     final signature = await _signatureController.toPngBytes();
     setState(() {
       _isEditing = false;
-      _savedSignature = signature; // allow null (blank save)
+      _savedSignature = signature; // can be null = blank
     });
   }
 
+  /// Redo inside pad
   void _redoSignature() {
     _signatureController.clear();
   }
 
+  /// Clear after saved
   void _clearSignature() {
     setState(() {
       _savedSignature = null;
     });
   }
 
-  /// Pick files
-  Future<void> _pickFiles() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['jpg', 'jpeg', 'png', 'mp4'],
-      allowMultiple: true,
-      withData: true,
-    );
+  /// Pick proof of delivery (photo/video)
+  Future<void> _pickProof() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? file = await picker.pickImage(source: ImageSource.gallery);
 
-    if (result != null) {
-      final files = result.files
-          .where((f) => f.size <= 50 * 1024 * 1024) // 50MB max
-          .map((f) => f.bytes!)
-          .toList();
-
+    if (file != null) {
       setState(() {
-        _uploadedFiles.addAll(files);
+        _proofFiles.add(File(file.path));
       });
     }
   }
@@ -170,6 +164,7 @@ class _DeliveryConfirmationState extends State<DeliveryConfirmation> {
                                 fontSize: 16, fontWeight: FontWeight.bold)),
                       ],
                     ),
+
                     const SizedBox(height: 12),
                     TextField(
                       controller: _recipientNameController,
@@ -186,6 +181,7 @@ class _DeliveryConfirmationState extends State<DeliveryConfirmation> {
                         border: OutlineInputBorder(),
                       ),
                     ),
+
                     const SizedBox(height: 20),
                     Row(
                       children: const [
@@ -197,6 +193,8 @@ class _DeliveryConfirmationState extends State<DeliveryConfirmation> {
                       ],
                     ),
                     const SizedBox(height: 8),
+
+                    // Signature Box
                     Container(
                       height: 150,
                       decoration: BoxDecoration(
@@ -215,6 +213,7 @@ class _DeliveryConfirmationState extends State<DeliveryConfirmation> {
                             Image.memory(_savedSignature!)
                           else
                             const Center(child: Text("No signature")),
+
                           if (_isEditing)
                             Positioned(
                               right: 8,
@@ -229,13 +228,17 @@ class _DeliveryConfirmationState extends State<DeliveryConfirmation> {
                       ),
                     ),
                     const SizedBox(height: 8),
+
+                    // Signature Buttons
                     if (_isEditing) ...[
                       Row(
                         children: [
                           Expanded(
                             child: ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.red),
+                                backgroundColor: Colors.red,
+                                foregroundColor: Colors.white,
+                              ),
                               onPressed: _cancelEditing,
                               child: const Text("Cancel"),
                             ),
@@ -244,7 +247,9 @@ class _DeliveryConfirmationState extends State<DeliveryConfirmation> {
                           Expanded(
                             child: ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.green),
+                                backgroundColor: Colors.green,
+                                foregroundColor: Colors.white,
+                              ),
                               onPressed: _saveSignature,
                               child: const Text("Save"),
                             ),
@@ -257,7 +262,9 @@ class _DeliveryConfirmationState extends State<DeliveryConfirmation> {
                           Expanded(
                             child: ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.blue),
+                                backgroundColor: Colors.blue,
+                                foregroundColor: Colors.white,
+                              ),
                               onPressed: _startEditing,
                               child: const Text("Edit"),
                             ),
@@ -266,7 +273,9 @@ class _DeliveryConfirmationState extends State<DeliveryConfirmation> {
                           Expanded(
                             child: ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.red),
+                                backgroundColor: Colors.red,
+                                foregroundColor: Colors.white,
+                              ),
                               onPressed: _clearSignature,
                               child: const Text("Clear"),
                             ),
@@ -278,7 +287,9 @@ class _DeliveryConfirmationState extends State<DeliveryConfirmation> {
                         width: double.infinity,
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blue),
+                            backgroundColor: Colors.blue,
+                            foregroundColor: Colors.white,
+                          ),
                           onPressed: _startEditing,
                           child: const Text("Edit"),
                         ),
@@ -301,8 +312,9 @@ class _DeliveryConfirmationState extends State<DeliveryConfirmation> {
             ),
             const SizedBox(height: 8),
 
+            // Upload box
             GestureDetector(
-              onTap: _pickFiles,
+              onTap: _pickProof,
               child: Container(
                 height: 150,
                 decoration: BoxDecoration(
@@ -326,21 +338,30 @@ class _DeliveryConfirmationState extends State<DeliveryConfirmation> {
             ),
 
             const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: _uploadedFiles
-                  .map((file) => Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey),
-                  borderRadius: BorderRadius.circular(6),
-                  color: Colors.grey[200],
+            // Preview selected files
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: List.generate(
+                  _proofFiles.length,
+                      (index) => Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: Container(
+                      width: 60,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey),
+                        borderRadius: BorderRadius.circular(6),
+                        color: Colors.grey[200],
+                        image: DecorationImage(
+                          image: FileImage(_proofFiles[index]),
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
-                child: Image.memory(file, fit: BoxFit.cover),
-              ))
-                  .toList(),
+              ),
             ),
 
             const SizedBox(height: 20),
