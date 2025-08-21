@@ -12,7 +12,7 @@ class MainApp extends StatelessWidget {
   const MainApp({super.key});
 
   Future<bool> _checkLogin() async {
-    return true;
+    return false;
   }
 
   @override
