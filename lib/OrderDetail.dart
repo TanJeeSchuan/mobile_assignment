@@ -44,6 +44,90 @@ class OrderDetail extends StatelessWidget{
             borderRadius: BorderRadius.circular(8), // rounded corners
             border: Border.all(
               color: Colors.grey.shade300, // thin border
+              width: 2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.28),
+                spreadRadius: 1,
+                blurRadius: 4,
+                offset: const Offset(3, 4), // shadow direction
+              ),
+            ],
+          ),
+          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 45), // outside space
+          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 6), // inside space
+          child: Column(
+            children: [
+              DeliveryCardContents(),
+              SizedBox(height: 16),
+              TrackingHistory(),
+              SizedBox(height: 16),
+              PackageDetails(),
+              SizedBox(height: 16),
+              AttachmentsFrame(),
+              SizedBox(height: 16),
+              ContactsFrame(),
+              SizedBox(height: 26),
+              StepConfirmedButton(),
+              SizedBox(height: 26),
+            ],
+          ),
+        ),
+      )
+    );
+  }
+}
+
+class StepConfirmedButton extends StatelessWidget{
+  const StepConfirmedButton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 250,
+      height: 48,
+      child: ElevatedButton(
+          onPressed: (){
+            //TODO go to verification
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.stepActive, // button background color
+            foregroundColor: Colors.white, // text/icon color
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12), // <-- rounded corners
+            ),
+          ),
+          child: Text("Step Confirmed"),
+      ),
+    );
+  }
+}
+
+class ContactsFrame extends StatelessWidget {
+  const ContactsFrame({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+            "Contacts",
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+            ),
+          ),
+        ),
+        Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(2), // rounded corners
+            border: Border.all(
+              color: Colors.black, // thin border
               width: 1,
             ),
             boxShadow: [
@@ -55,21 +139,77 @@ class OrderDetail extends StatelessWidget{
               ),
             ],
           ),
-          margin: const EdgeInsets.symmetric(horizontal: 45, vertical: 45), // outside space
-          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 6), // inside space
-          child: Column(
-            children: [
-              DeliveryCardContents(),
-              SizedBox(height: 12),
-              TrackingHistory(),
-              SizedBox(height: 16),
-              PackageDetails(),
-              SizedBox(height: 16),
-              AttachmentsFrame(),
-            ],
+          child: SizedBox(
+            width: MediaQuery.of(context).size.width, // force full parent width
+            child: Column(
+              children: [
+                Row(
+                  children: const [
+                    Icon(Icons.account_box),
+                    SizedBox(width: 8),
+                    Expanded(
+                      flex: 2,
+                      child: Text("Purchasing Officer"),
+                    ),
+                    Expanded(
+                      flex: 2,
+                      child: Text("Ahmad Zulkifli"),
+                    ),
+                    Icon(Icons.phone),
+                    SizedBox(width: 8),
+                    Expanded(
+                      flex: 1,
+                      child: Text("0123456789"),
+                    ),
+                  ],
+                ),
+                Divider(),
+                Row(
+                  children: const [
+                    Icon(Icons.account_box),
+                    SizedBox(width: 8),
+                    Expanded(
+                      flex: 2,
+                      child: Text("Warehouse Manager"),
+                    ),
+                    Expanded(
+                      flex: 2,
+                      child: Text("Roslan Tan"),
+                    ),
+                    Icon(Icons.phone),
+                    SizedBox(width: 8),
+                    Expanded(
+                      flex: 1,
+                      child: Text("0132223344"),
+                    ),
+                  ],
+                ),
+                Divider(),
+                Row(
+                  children: const [
+                    Icon(Icons.account_box),
+                    SizedBox(width: 8),
+                    Expanded(
+                      flex: 2,
+                      child: Text("Delivery Coordinator"),
+                    ),
+                    Expanded(
+                      flex: 2,
+                      child: Text("Faizal Wong"),
+                    ),
+                    Icon(Icons.phone),
+                    SizedBox(width: 8),
+                    Expanded(
+                      flex: 1,
+                      child: Text("0118889990"),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
-      )
+      ],
     );
   }
 }
@@ -91,7 +231,30 @@ class AttachmentsFrame extends StatelessWidget{
             ),
           ),
         ),
-
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          // image icon
+          children: [
+            Image.asset(
+              'assets/image_icon.png',
+              width: 84,
+              height: 84,
+              fit: BoxFit.contain, // or cover, fill, etc.
+            ),
+            Image.asset(
+              'assets/image_icon.png',
+              width: 84,
+              height: 84,
+              fit: BoxFit.contain, // or cover, fill, etc.
+            ),
+            Image.asset(
+              'assets/more_icon.png',
+              width: 84,
+              height: 84,
+              fit: BoxFit.contain, // or cover, fill, etc.
+            )
+          ]
+        ),
       ],
     );
   }

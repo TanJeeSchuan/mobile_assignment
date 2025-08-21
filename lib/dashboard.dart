@@ -17,7 +17,9 @@ class Dashboard extends StatelessWidget {
           backgroundColor: Color(0xFF03A9F4),
           actions: <Widget>[
             IconButton(
-              onPressed: (){},
+              onPressed: (){
+                //TODO Navigate to User Profile
+              },
               icon: const Icon(Icons.account_circle_sharp),
             )
           ],
