@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "129070112093",
+    "project_id": "mobile-assignment-f9fab",
+    "storage_bucket": "mobile-assignment-f9fab.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:129070112093:android:9e5141a2f1ef31b6869cb4",
+        "android_client_info": {
+          "package_name": "com.greenstem.swiftparts.mobile_assignment"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAmzmd0Ql1KbpiRUlGH3lVmXOR8aj62J-g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,4 +1,8 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:mobile_assignment/main.dart';
+
+import 'login.dart';
 
 // void main() {
 //   runApp(const StaffDetailsApp());
@@ -118,8 +122,19 @@ class StaffDetailsPage extends StatelessWidget {
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: () {
-                            // Handle logout logic
+                          onPressed: () async {
+                            try {
+                              var _auth = FirebaseAuth.instance;
+                              await _auth.signOut();
+                              // Navigate to login screen after successful logout
+                              Navigator.of(context).pushAndRemoveUntil(
+                                MaterialPageRoute(builder: (context) => MainApp()),
+                                    (Route<dynamic> route) => false, // This predicate always returns false, removing all routes
+                              );
+                            } catch (e) {
+                              print('Error during logout: $e');
+                              // Handle logout errors, e.g., show a SnackBar
+                            }
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.redAccent,
