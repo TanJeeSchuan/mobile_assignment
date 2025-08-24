@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_assignment/main.dart';
@@ -19,147 +20,203 @@ import 'login.dart';
 //     );
 //   }
 // }
+class _userData {
+  late String id;
+  late String staffId;
+  late String staffName;
+  late String contactNumber;
+  late String staffEmail;
+
+  _userData(this.id, this.staffId, this.staffName, this.contactNumber, this.staffEmail);
+
+  factory _userData.fromFirestore(String id, Map<String, dynamic> data) {
+    return _userData(
+      id,
+      data["StaffID"]?.toString() ?? "",   // 🔥 convert to String
+      data["StaffName"] ?? "",
+      data["StaffContact"] ?? "",
+      data["StaffEmail"] ?? "",
+    );
+  }
+}
 
 class StaffDetailsPage extends StatelessWidget {
-  const StaffDetailsPage({super.key});
+
+  StaffDetailsPage({super.key});
+  _userData? userData;
+
+  Future<_userData?> retrieveUserData() async {
+    try {
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection("users")
+          .where("StaffEmail",
+          isEqualTo: FirebaseAuth.instance.currentUser?.email)
+          .limit(1)
+          .get();
+
+      if (querySnapshot.docs.isNotEmpty) {
+        var doc = querySnapshot.docs.single;
+        return _userData.fromFirestore(doc.id, doc.data());
+      }
+    } catch (e) {
+      print("Error fetching users: $e");
+    }
+    return null;
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Top Bar
-            Container(
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.lightBlue,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Colors.white),
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  const Icon(Icons.person_outline, color: Colors.black),
-                  const SizedBox(width: 6),
-                  const Text(
-                    "Staff Details",
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  )
-                ],
-              ),
-            ),
+      body: FutureBuilder(
+        future: retrieveUserData(),
+        builder: (context, asyncSnapshot) {
+          if (asyncSnapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-            const SizedBox(height: 20),
+          if (!asyncSnapshot.hasData || asyncSnapshot.data == null) {
+            return const Text("No user data found.");
+          }
 
-            // Card
-            Expanded(
-              child: Center(
-                child: Container(
-                  width: double.infinity,
-                  margin: const EdgeInsets.symmetric(horizontal: 20),
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.grey.shade300,
-                        blurRadius: 6,
-                        offset: const Offset(0, 3),
+          final user = asyncSnapshot.data!;
+          userData = user;
+
+          return SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Top Bar
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.lightBlue,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: IconButton(
+                          icon: const Icon(Icons.arrow_back, color: Colors.white),
+                          onPressed: () {
+                            Navigator.pop(context);
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Icon(Icons.person_outline, color: Colors.black),
+                      const SizedBox(width: 6),
+                      const Text(
+                        "Staff Details",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       )
                     ],
                   ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Avatar
-                      const CircleAvatar(
-                        radius: 40,
-                        backgroundColor: Colors.lightBlueAccent,
-                        child: Icon(
-                          Icons.person_outline,
-                          size: 50,
-                          color: Colors.blue,
-                        ),
+                ),
+          
+                const SizedBox(height: 20),
+          
+                // Card
+                Expanded(
+                  child: Center(
+                    child: Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.symmetric(horizontal: 20),
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.shade300,
+                            blurRadius: 6,
+                            offset: const Offset(0, 3),
+                          )
+                        ],
                       ),
-                      const SizedBox(height: 16),
-
-                      // Welcome Text
-                      const Text(
-                        "Welcome, ALI BABA\nStaff ID: 007",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-
-                      // Full Name
-                      buildReadOnlyField("Full Name", "ALI BABA"),
-
-                      // Contact Number
-                      buildReadOnlyField("Contact Number", "+60123456789"),
-
-                      // Email
-                      buildReadOnlyField("Email", "alibaba@gmail.com"),
-
-                      const SizedBox(height: 30),
-
-                      // Logout Button
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: () async {
-                            try {
-                              var _auth = FirebaseAuth.instance;
-                              await _auth.signOut();
-                              // Navigate to login screen after successful logout
-                              Navigator.of(context).pushAndRemoveUntil(
-                                MaterialPageRoute(builder: (context) => MainApp()),
-                                    (Route<dynamic> route) => false, // This predicate always returns false, removing all routes
-                              );
-                            } catch (e) {
-                              print('Error during logout: $e');
-                              // Handle logout errors, e.g., show a SnackBar
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.redAccent,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Avatar
+                          const CircleAvatar(
+                            radius: 40,
+                            backgroundColor: Colors.lightBlueAccent,
+                            child: Icon(
+                              Icons.person_outline,
+                              size: 50,
+                              color: Colors.blue,
                             ),
                           ),
-                          child: const Text(
-                            "Logout",
-                            style: TextStyle(
-                              color: Colors.white,
+                          const SizedBox(height: 16),
+          
+                          // Welcome Text
+                          Text(
+                            "Welcome, ${userData!.staffName}\nStaff ID: ${userData!.staffId}",
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
                               fontSize: 16,
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
-                        ),
+                          const SizedBox(height: 20),
+          
+                          // Full Name
+                          buildReadOnlyField("Full Name", userData!.staffName),
+
+                          // Contact Number
+                          buildReadOnlyField("Contact Number", userData!.contactNumber),
+
+                          // Email
+                          buildReadOnlyField("Email", userData!.staffEmail),
+
+                          const SizedBox(height: 30),
+          
+                          // Logout Button
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: () async {
+                                try {
+                                  var _auth = FirebaseAuth.instance;
+                                  await _auth.signOut();
+                                  // Navigate to login screen after successful logout
+                                  Navigator.of(context).pushAndRemoveUntil(
+                                    MaterialPageRoute(builder: (context) => MainApp()),
+                                        (Route<dynamic> route) => false, // This predicate always returns false, removing all routes
+                                  );
+                                } catch (e) {
+                                  print('Error during logout: $e');
+                                  // Handle logout errors, e.g., show a SnackBar
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.redAccent,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              child: const Text(
+                                "Logout",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
+          );
+        }
       ),
     );
   }

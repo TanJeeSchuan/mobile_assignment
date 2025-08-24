@@ -20,7 +20,7 @@ class Dashboard extends StatelessWidget {
             IconButton(
               onPressed: (){
                 Navigator.push(context, MaterialPageRoute<void>(
-                  builder: (context) => const StaffDetailsPage(),
+                  builder: (context) => StaffDetailsPage(),
                 ),);
               },
               icon: const Icon(Icons.account_circle_sharp),
