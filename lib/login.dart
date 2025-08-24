@@ -90,7 +90,7 @@ class LoginCard extends StatelessWidget {
                             SizedBox(
                               width: 120, // fixed width for label
                               child: Text(
-                                'Staff ID',
+                                'Email',
                                 style: TextStyle(fontSize: 24.0),
                               ),
                             ),
