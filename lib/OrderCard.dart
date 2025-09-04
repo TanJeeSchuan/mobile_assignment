@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mobile_assignment/models/OrderSummary.dart';
 
 import 'AppColors.dart';
 import 'Defines.dart';
@@ -7,7 +8,9 @@ import 'OrderDetail.dart';
 import 'OrderVerification.dart';
 
 class DeliveryCard extends StatelessWidget{
-  const DeliveryCard({super.key});
+  final OrderSummary delivery;
+
+  const DeliveryCard({super.key, required this.delivery});
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +36,7 @@ class DeliveryCard extends StatelessWidget{
         ),
         child: Column(
           children: [
-            DeliveryCardContents(),
+            DeliveryCardContents(delivery: delivery),
             SizedBox(height: 28,),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -89,6 +92,14 @@ class DeliveryCard extends StatelessWidget{
 }
 
 class DeliveryCardContents extends StatelessWidget{
+  final OrderSummary delivery;
+  final StatusBarOrderType status;
+
+  DeliveryCardContents({
+    super.key,
+    required this.delivery
+  }): status = _getStatusFromDelivery(delivery);
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -98,14 +109,14 @@ class DeliveryCardContents extends StatelessWidget{
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              "Delivery #12345",
+              "Delivery ${delivery.orderId.toUpperCase()}",
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
             ),
-            Container(
+            Container(  // status box with rounded corners and shadow
                 width: 155,
                 height: 45,
                 decoration: BoxDecoration(
-                  color: AppColors.ready,
+                  color: _getStatusBoxColor(status), // Set color based on delivery status
                   borderRadius: BorderRadius.circular(6), // rounded corners
                   boxShadow: [
                     BoxShadow(
@@ -116,7 +127,7 @@ class DeliveryCardContents extends StatelessWidget{
                   ],
                 ),
                 child: Center(
-                    child: Text("Ready for pickup")
+                    child: Text(delivery.status)
                 )
             )
           ],
@@ -130,28 +141,21 @@ class DeliveryCardContents extends StatelessWidget{
           children: [
             LabelWithSymbolAndValue(
               label: "Warehouse:",
-              value: "Batu Caves Hub",
+              value: delivery.source,
               symbolColor: Colors.black,
               icon: Icons.dataset,
             ),
-            const SizedBox(height: 12), // spacing
-            LabelWithSymbolAndValue(
-              label: "Volume:",
-              value: "2 Boxes",
-              symbolColor: Colors.black,
-              icon: Icons.add_box,
-            ),
-            const SizedBox(height: 12), // spacing
+            const SizedBox(height: 12), // spacingng
             LabelWithSymbolAndValue(
               label: "Drop Off:",
-              value: "Sentul Workshop",
+              value: delivery.destination,
               symbolColor: Colors.black,
               icon: Icons.folder,
             ),
             const SizedBox(height: 12), // spacing
             LabelWithSymbolAndValue(
               label: "Weight:",
-              value: "15kg",
+              value: "${delivery.weight}kg",
               symbolColor: Colors.black,
               icon: Icons.monitor_weight,
             ),
@@ -167,42 +171,108 @@ class DeliveryCardContents extends StatelessWidget{
           children: [
             LabelWithSymbolAndValue(
               label: "Deliver By:",
-              value: "7 June, 12pm",
+              value: delivery.deliverBy,
               symbolColor: Colors.black,
               icon: Icons.timer,
             ),
           ],
         ),
         SizedBox(height: 28,),
-        OrderProgression(),
-
+        OrderProgression(status: status),
       ],
     );
   }
 
+  static StatusBarOrderType _getStatusFromDelivery(OrderSummary delivery) {
+    var txt = delivery.status;
+
+    if(txt == "Packing") {
+      return StatusBarOrderType.packing;
+    }
+    else if(txt == "Ready To Ship"){
+      return StatusBarOrderType.ready;
+    }
+    else if (txt == "In Transit") {
+      return StatusBarOrderType.transit;
+    }
+    else{
+      return StatusBarOrderType.arrived;
+    }
+  }
+
+  Color _getStatusBoxColor(StatusBarOrderType status) {
+    switch (status) {
+      case StatusBarOrderType.packing:
+        return AppColors.packing;
+      case StatusBarOrderType.ready:
+        return AppColors.ready;
+      case StatusBarOrderType.transit:
+        return AppColors.transit;
+      case StatusBarOrderType.arrived:
+        return AppColors.arrived;
+    }
+  }
 }
 
 // TODO modify to stateful
 class OrderProgression extends StatelessWidget{
-  const OrderProgression({super.key});
+  final StatusBarOrderType status;
+  List<OrderStageStatus> statusList = [
+    OrderStageStatus.completed,
+    OrderStageStatus.active,
+    OrderStageStatus.pending,
+    OrderStageStatus.pending,
+  ];
+
+  OrderProgression({super.key, required this.status});
 
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final arrowSize = screenWidth * 0.03; // 3% of screen width
 
+    if(status == StatusBarOrderType.packing) {
+      statusList = [
+        OrderStageStatus.active,
+        OrderStageStatus.pending,
+        OrderStageStatus.pending,
+        OrderStageStatus.pending,
+      ];
+    } else if(status == StatusBarOrderType.ready) {
+      statusList = [
+        OrderStageStatus.completed,
+        OrderStageStatus.active,
+        OrderStageStatus.pending,
+        OrderStageStatus.pending,
+      ];
+    } else if(status == StatusBarOrderType.transit) {
+      statusList = [
+        OrderStageStatus.completed,
+        OrderStageStatus.completed,
+        OrderStageStatus.active,
+        OrderStageStatus.pending,
+      ];
+    } else if(status == StatusBarOrderType.arrived) {
+      statusList = [
+        OrderStageStatus.completed,
+        OrderStageStatus.completed,
+        OrderStageStatus.completed,
+        OrderStageStatus.active,
+      ];
+    }
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center, // 👈 align to top,
       children: [
         Expanded(
           child: OrderProgressIcon(
             orderType: StatusBarOrderType.packing,
-            status: OrderStageStatus.completed,
+            status: statusList[0],
           ),
         ),
         Align(
-          alignment: Alignment.center, // vertical center
+          alignment: Alignment.topCenter, // vertical center
           child: Icon(
             Icons.arrow_forward_ios,
             size: arrowSize,
@@ -211,7 +281,7 @@ class OrderProgression extends StatelessWidget{
         Expanded(
           child: OrderProgressIcon(
             orderType: StatusBarOrderType.ready,
-            status: OrderStageStatus.active,
+            status: statusList[1],
           ),
         ),
         Icon(
@@ -221,7 +291,7 @@ class OrderProgression extends StatelessWidget{
         Expanded(
           child: OrderProgressIcon(
             orderType: StatusBarOrderType.transit,
-            status: OrderStageStatus.pending,
+            status: statusList[2],
           ),
         ),
         Icon(
@@ -231,7 +301,7 @@ class OrderProgression extends StatelessWidget{
         Expanded(
           child: OrderProgressIcon(
             orderType: StatusBarOrderType.arrived,
-            status: OrderStageStatus.pending,
+            status: statusList[3],
           ),
         ),
       ],
@@ -239,115 +309,91 @@ class OrderProgression extends StatelessWidget{
   }
 }
 
-class OrderProgressIcon extends StatefulWidget{
+Color GetStatusBoxColor(status) {
+  switch (status) {
+    case OrderStageStatus:
+      return AppColors.stepPending;
+    case OrderStageStatus.active:
+      return AppColors.stepActive;
+    case OrderStageStatus.completed:
+      return AppColors.stepCompleted;
+  }
+
+  return AppColors.ready;
+}
+
+class OrderProgressIcon extends StatelessWidget {
   final StatusBarOrderType orderType;
-  final OrderStageStatus status; // 👈 status variable added
+  final OrderStageStatus status;
 
   const OrderProgressIcon({
     super.key,
-    required this.status,
     required this.orderType,
+    required this.status,
   });
 
-  @override
-  State<StatefulWidget> createState() {
-    return _OrderProgressIconState();
-  }
-}
-
-class _OrderProgressIconState extends State<OrderProgressIcon>{
-  Color boxColor = AppColors.stepPending;
-  IconData icon = Icons.error;
-  String desc = "";
-
-  void _setText(){
-    switch(widget.orderType){
-      case StatusBarOrderType.packing:
-        desc = "Packing";
-        break;
-      case StatusBarOrderType.ready:
-        desc = "Ready to Ship";
-        break;
-      case StatusBarOrderType.transit:
-        desc = "In Transit";
-        break;
-      case StatusBarOrderType.arrived:
-        desc = "Arrived";
-        break;
-    }
-  }
-
-  void _setIconData(){
-    switch(widget.orderType){
-      case StatusBarOrderType.packing:
-        icon = Icons.checklist;
-        break;
-      case StatusBarOrderType.ready:
-        icon = Icons.trolley;
-        break;
-      case StatusBarOrderType.transit:
-        icon = Icons.local_shipping;
-        break;
-      case StatusBarOrderType.arrived:
-        icon = Icons.warehouse;
-        break;
-    }
-  }
-
-  void _setBoxColor(){
-    switch(widget.status) {
+  Color _getBoxColor() {
+    switch (status) {
       case OrderStageStatus.pending:
-        boxColor = AppColors.stepPending;
-        break;
+        return AppColors.stepPending;
       case OrderStageStatus.active:
-        boxColor = AppColors.stepActive;
-        break;
+        return AppColors.stepActive;
       case OrderStageStatus.completed:
-        boxColor = AppColors.stepCompleted;
-        break;
+        return AppColors.stepCompleted;
     }
   }
 
-  @override
-  void initState() {
-    super.initState();
-
-    _setIconData();
-    _setBoxColor();
-    _setText();
+  IconData _getIconData() {
+    switch (orderType) {
+      case StatusBarOrderType.packing:
+        return Icons.checklist;
+      case StatusBarOrderType.ready:
+        return Icons.trolley; // make sure this exists, might need CupertinoIcons.cart
+      case StatusBarOrderType.transit:
+        return Icons.local_shipping;
+      case StatusBarOrderType.arrived:
+        return Icons.warehouse;
+    }
   }
 
-
-  @override
-  void didUpdateWidget(covariant OrderProgressIcon oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    // 👈 Update colors/icons when parent changes props
-    _setIconData();
-    _setBoxColor();
-    _setText();
+  String _getText() {
+    switch (orderType) {
+      case StatusBarOrderType.packing:
+        return "Packing";
+      case StatusBarOrderType.ready:
+        return "Ready to Ship";
+      case StatusBarOrderType.transit:
+        return "In Transit";
+      case StatusBarOrderType.arrived:
+        return "Arrived";
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Container(  // icon display
+        Container(
           width: 64,
           height: 64,
           decoration: BoxDecoration(
-            color: boxColor, // background color
-            borderRadius: BorderRadius.circular(12), // rounded corners
+            color: _getBoxColor(),
+            borderRadius: BorderRadius.circular(12),
           ),
-          child: Icon(
-            icon,
-            size: 32,
-            color: Colors.black, // optional
+          child: Icon(_getIconData(), size: 32, color: Colors.black),
+        ),
+        const SizedBox(height: 6),
+        SizedBox(
+          height: 36,
+          child: Text(
+            _getText(),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 14),
           ),
         ),
-        Text(       // bottom text
-          desc,
-          textAlign: TextAlign.center,
-        )
       ],
     );
   }

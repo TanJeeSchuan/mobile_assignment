@@ -9,6 +9,14 @@ enum StatusBarOrderType{
   arrived,
 }
 
+Map<StatusBarOrderType, String> OrderStatusText = {
+  StatusBarOrderType.packing: "Packing",
+  StatusBarOrderType.ready:   "Ready To Ship",
+  StatusBarOrderType.transit: "In Transit",
+  StatusBarOrderType.arrived: "Package Arrived",
+};
+
+
 enum OrderStageStatus {
   pending,
   active,

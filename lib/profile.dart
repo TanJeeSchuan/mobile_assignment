@@ -1,7 +1,10 @@
+import 'dart:convert';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_assignment/main.dart';
+import 'package:http/http.dart' as http;
 
 import 'login.dart';
 
@@ -38,6 +41,17 @@ class _userData {
       data["StaffEmail"] ?? "",
     );
   }
+
+  // Factory constructor for JSON map (from HTTP or Firestore-like map with 'id' inside)
+  factory _userData.fromJson(Map<String, dynamic> json) {
+    return _userData(
+      json['id']?.toString() ?? "",              // Use id field if included in JSON
+      json['StaffID']?.toString() ?? "",        // convert to String safely
+      json['StaffName'] ?? "",
+      json['StaffContact'] ?? "",
+      json['StaffEmail'] ?? "",
+    );
+  }
 }
 
 class StaffDetailsPage extends StatelessWidget {
@@ -47,17 +61,35 @@ class StaffDetailsPage extends StatelessWidget {
 
   Future<_userData?> retrieveUserData() async {
     try {
-      final querySnapshot = await FirebaseFirestore.instance
-          .collection("users")
-          .where("StaffEmail",
-          isEqualTo: FirebaseAuth.instance.currentUser?.email)
-          .limit(1)
-          .get();
+      // final querySnapshot = await FirebaseFirestore.instance
+      //     .collection("users")
+      //     .where("StaffEmail",
+      //     isEqualTo: FirebaseAuth.instance.currentUser?.email)
+      //     .limit(1)
+      //     .get();
 
-      if (querySnapshot.docs.isNotEmpty) {
-        var doc = querySnapshot.docs.single;
-        return _userData.fromFirestore(doc.id, doc.data());
+      var user = FirebaseAuth.instance.currentUser;
+      var email = user?.email;
+
+      final idToken = await user?.getIdToken();
+      final uri = Uri.parse('https://us-central1-mobile-assignment-f9fab.cloudfunctions.net/get_user_by_email?email=$email');
+      final response = await http.get(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $idToken',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        return _userData.fromJson(jsonDecode(response.body));
+      } else {
+        print('Error: ${response.statusCode} - ${response.body}');
       }
+
+      // if (querySnapshot.docs.isNotEmpty) {
+      //   var doc = querySnapshot.docs.single;
+      //   return _userData.fromFirestore(doc.id, doc.data());
+      // }
     } catch (e) {
       print("Error fetching users: $e");
     }

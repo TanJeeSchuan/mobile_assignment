@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_assignment/AppColors.dart';
 import 'package:mobile_assignment/profile.dart';
+import 'package:mobile_assignment/service/DeliveryService.dart';
 
 import 'Defines.dart';
 import 'GeneralWidgets.dart';
 import 'OrderCard.dart';
 import 'OrderDetail.dart';
+import 'models/OrderSummary.dart';
 
 class Dashboard extends StatelessWidget {
   const Dashboard({super.key});
@@ -27,21 +29,68 @@ class Dashboard extends StatelessWidget {
             )
           ],
         ),
-        body: SingleChildScrollView(
-            child: Column(
-          children: [
-            // order status
-            OrderStatus(),
-            // delivery cards
-            Column(
-              children: [
-                DeliveryCard(),
-                DeliveryCard(),
-              ],
-            )
-          ],
-        )
-      )
+        body: ListView(
+            children:[
+              // order status
+              OrderStatus(),
+              // delivery cards
+              DeliveryListScreen(),
+              // Column(
+              //   children: [
+              //     DeliveryCard(),
+              //     DeliveryCard(),
+              //   ],
+              // )
+            ],
+          )
+      );
+  }
+}
+
+class DeliveryListScreen extends StatefulWidget {
+  const DeliveryListScreen({super.key});
+
+  @override
+  State<DeliveryListScreen> createState() => _DeliveryListScreenState();
+}
+
+class _DeliveryListScreenState extends State<DeliveryListScreen> {
+  late Future<List<OrderSummary>> ordersFuture;
+  late DeliveryService service;
+
+  @override
+  void initState() {
+    super.initState();
+    service = DeliveryService();
+    ordersFuture = () async {
+      return service.fetchDeliveries();
+    }();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<OrderSummary>>(
+      future: ordersFuture,
+      builder: (context, snapshot){
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        } else if (snapshot.hasError) {
+          return Center(child: Text("Error: ${snapshot.error}"));
+        } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const Center(child: Text("No deliveries found"));
+        }
+
+        final deliveries = snapshot.data!;
+
+        return ListView.builder(
+          shrinkWrap: true,
+          physics: NeverScrollableScrollPhysics(), // disable ListView scrolling
+          itemCount: deliveries.length,
+          itemBuilder: (context, index) {
+            return DeliveryCard(delivery: deliveries[index]);
+          },
+        );
+      },
     );
   }
 }

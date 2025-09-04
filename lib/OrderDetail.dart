@@ -59,7 +59,7 @@ class OrderDetail extends StatelessWidget{
           padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 6), // inside space
           child: Column(
             children: [
-              DeliveryCardContents(),
+              //DeliveryCardContents(),
               SizedBox(height: 16),
               TrackingHistory(),
               SizedBox(height: 16),
@@ -393,7 +393,7 @@ class OrderHeader extends StatelessWidget {
           ],
         ),
         SizedBox(height: 28,),
-        OrderProgression(),
+        OrderProgression(status: StatusBarOrderType.ready),
 
       ],
     );
