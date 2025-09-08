@@ -1,30 +1,206 @@
 import 'dart:core';
+import '../Defines.dart';
+import 'OrderSummary.dart';
 import 'Workshop.dart';
 import 'Warehouse.dart';
+import 'Part.dart';
 
 class Delivery {
-  String delivery_id;
-  List<String> attachments;
-  DateTime delivery_by;
-  Warehouse source_warehouse;
-  Workshop destination_workshop;
-  double weight;
-  List<Stage> stages;
+  final List<Attachment> attachments;
+  final DateTime deliverBy;
+  final Workshop destinationWorkshop;
+  final List<DeliveryPart> packageDetails;
+  final Warehouse sourceWarehouse;
+  final List<Stage> stages;
+  final double weight;
+  String? delivery_id; // Optional field for database ID
 
-  Delivery(this.delivery_id, this.attachments, this.delivery_by,
-      this.source_warehouse, this.destination_workshop, this.weight,
-      this.stages);
+  Delivery({
+    required this.attachments,
+    required this.deliverBy,
+    required this.destinationWorkshop,
+    required this.packageDetails,
+    required this.sourceWarehouse,
+    required this.stages,
+    required this.weight,
+    this.delivery_id,
+  });
 
-  // fromJson(Map<String, dynamic> json) {
-  //   return Delivery(
-  //     json['delivery_id']
-  // }
+  factory Delivery.fromJson(Map<String, dynamic> json) {
+    return Delivery(
+      attachments: (json['attachments'] as List)
+          .map((attachment) => Attachment.fromJson(attachment))
+          .toList(),
+      deliverBy: DateTime.parse(json['deliverBy']),
+      destinationWorkshop: Workshop.fromJson(json['destinationWorkshop']),
+      packageDetails: (json['packageDetails'] as List)
+          .map((part) => DeliveryPart.fromJson(part))
+          .toList(),
+      sourceWarehouse: Warehouse.fromJson(json['sourceWarehouse']),
+      stages: (json['stages'] as List)
+          .map((stage) => Stage.fromJson(stage))
+          .toList(),
+      weight: (json['weight'] as num).toDouble(),
+      delivery_id: json['deliveryId'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'attachments': attachments.map((a) => a.toJson()).toList(),
+      'deliverBy': deliverBy.toIso8601String(),
+      'destinationWorkshop': destinationWorkshop.toJson(),
+      'packageDetails': packageDetails.map((p) => p.toJson()).toList(),
+      'sourceWarehouse': sourceWarehouse.toJson(),
+      'stages': stages.map((s) => s.toJson()).toList(),
+      'weight': weight,
+      if (delivery_id != null) 'delivery_id': delivery_id,
+    };
+  }
+
+  OrderSummary toOrderSummary() {
+    return OrderSummary(
+      orderId: delivery_id ?? 'N/A',  // Provide a default value if delivery_id is null
+      deliverBy: deliverBy.toString(),
+      weight: weight.toInt(),
+      status: stages.isNotEmpty ? getStatusMessage(getLastCompleteStage(stages)!) : 'Unknown',
+      source: sourceWarehouse.name,
+      destination: destinationWorkshop.name,
+    );
+  }
+
+  /// Returns the last completed stage from the list of stages.
+  /// Returns null if no stages are completed.
+  static String? getLastCompleteStage(List<Stage> stageList) {
+    String? lastCompleted;
+    
+    for (final stage in stageList) {
+      if (stage.status.booleanValue) {
+        lastCompleted = stage.stage;
+      } else {
+        break; // Stop at first incomplete stage
+      }
+    }
+    
+    return lastCompleted;
+  }
+
+  static String getStatusMessage(String stage) {
+    switch (stage) {
+      case 'order_confirmed':
+        return "Packing";
+      case 'packing_finished':
+        return "Ready To Ship";
+      case 'package_pickup':
+        return "In Transit";
+      case 'package_dropoff':
+        return "Package Arrived";
+      case 'order_complete':
+        return "Completed";
+      default:
+        return "Unknown";
+    }
+  }
+}
+
+class DeliveryPart {
+  final String code;
+  final String name;
+  final int quantity;
+  
+  DeliveryPart({
+    required this.code,
+    required this.name,
+    required this.quantity,
+  });
+
+  factory DeliveryPart.fromJson(Map<String, dynamic> json) {
+    return DeliveryPart(
+      code: json['code'],
+      name: json['name'],
+      quantity: json['qty'], // Changed from 'quantity' to 'qty' to match JSON
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'code': code,
+      'name': name,
+      'qty': quantity, // Changed from 'quantity' to 'qty' to match JSON
+    };
+  }
+}
+
+class Attachment {
+  final String description;
+  final String downloadUrl;
+  final String path;
+
+  Attachment({
+    required this.description,
+    required this.downloadUrl,
+    required this.path,
+  });
+
+  factory Attachment.fromJson(Map<String, dynamic> json) {
+    return Attachment(
+      description: json['description'],
+      downloadUrl: json['downloadUrl'],
+      path: json['path'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'description': description,
+      'downloadUrl': downloadUrl,
+      'path': path,
+    };
+  }
 }
 
 class Stage {
   final String stage;
-  final bool status;
-  DateTime timestamp = DateTime.fromMicrosecondsSinceEpoch(0);
+  final StageStatus status;
+  final DateTime? timestamp;
 
-  Stage(this.stage, this.status);
+  Stage({
+    required this.stage,
+    required this.status,
+    this.timestamp,
+  });
+
+  factory Stage.fromJson(Map<String, dynamic> json) {
+    return Stage(
+      stage: json['stage'],
+      status: StageStatus.fromJson(json['status']),
+      timestamp: json['timestamp'] != null ? DateTime.parse(json['timestamp']) : null,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'stage': stage,
+      'status': status.toJson(),
+      'timestamp': timestamp?.toIso8601String(),
+    };
+  }
+}
+
+class StageStatus {
+  final bool booleanValue;
+
+  StageStatus({required this.booleanValue});
+
+  factory StageStatus.fromJson(Map<String, dynamic> json) {
+    return StageStatus(
+      booleanValue: json['booleanValue'] ?? false,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'booleanValue': booleanValue,
+    };
+  }
 }

@@ -26,4 +26,6 @@ class OrderSummary {
       destination: json['destination'] ?? "Unknown",
     );
   }
+
+
 }

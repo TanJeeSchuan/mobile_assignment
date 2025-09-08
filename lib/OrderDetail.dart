@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:mobile_assignment/service/DeliveryService.dart';
+import 'package:intl/intl.dart';
 
 import 'AppColors.dart';
 import 'Defines.dart';
 import 'GeneralWidgets.dart';
 import 'OrderCard.dart';
+import 'OrderVerification.dart';
+import 'models/Delivery.dart';
+import 'models/Part.dart';
 
 class OrderStage {
   final String stage;
@@ -27,56 +32,126 @@ final List<OrderStage> orderStages = [
 
 
 class OrderDetail extends StatelessWidget{
-  const OrderDetail({super.key});
+  final String deliveryId;
+
+  OrderDetail({super.key, required this.deliveryId});
+
+  Future<Delivery?> fetchDelivery(deliveryId) async {
+    print(deliveryId);
+    return await DeliveryService().fetchDeliveryDetail(deliveryId);
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: DetailedAppBar(
-        appBarIcon: Icons.account_box,
-        heading: "Order Details",
-        subheading: "Posted At 9:50 A.M."
-      ),
-      body: SingleChildScrollView(
-        child:Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(8), // rounded corners
-            border: Border.all(
-              color: Colors.grey.shade300, // thin border
-              width: 2,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.28),
-                spreadRadius: 1,
-                blurRadius: 4,
-                offset: const Offset(3, 4), // shadow direction
+    return FutureBuilder(
+        future: fetchDelivery(deliveryId),
+        builder: (context, asyncSnapshot) {
+          if (asyncSnapshot.connectionState == ConnectionState.waiting) {
+            return Scaffold(
+              appBar: DetailedAppBar(
+                  appBarIcon: Icons.account_box,
+                  heading: "Order Details",
+                  subheading: "Loading Details..."
               ),
-            ],
-          ),
-          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 45), // outside space
-          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 6), // inside space
-          child: Column(
-            children: [
-              //DeliveryCardContents(),
-              SizedBox(height: 16),
-              TrackingHistory(),
-              SizedBox(height: 16),
-              PackageDetails(),
-              SizedBox(height: 16),
-              AttachmentsFrame(),
-              SizedBox(height: 16),
-              ContactsFrame(),
-              SizedBox(height: 26),
-              StepConfirmedButton(),
-              SizedBox(height: 26),
-            ],
-          ),
-        ),
-      )
-    );
+              body: Center(
+                child: Text('Error: ${asyncSnapshot.error}'),
+              ),
+            );
+            // return const Center(
+            //   child: CircularProgressIndicator(),
+            // );
+          }
+
+          if (asyncSnapshot.hasError) {
+            return Center(
+                child: Text('Error: ${asyncSnapshot.error}'),
+            );
+          }
+
+          final delivery = asyncSnapshot.data;
+          if (delivery == null) {
+            return Center(
+              child: Text('Delivery not found'),
+            );
+          }
+
+          return Scaffold(
+            appBar: DetailedAppBar(
+                appBarIcon: Icons.account_box,
+                heading: "Order Details",
+                subheading: "Deliver By ${_formatDate(delivery.deliverBy)}"
+            ),
+            body: SingleChildScrollView(
+              child:Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8), // rounded corners
+                  border: Border.all(
+                    color: Colors.grey.shade300, // thin border
+                    width: 2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.28),
+                      spreadRadius: 1,
+                      blurRadius: 4,
+                      offset: const Offset(3, 4), // shadow direction
+                    ),
+                  ],
+                ),
+                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 45), // outside space
+                padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 6), // inside space
+                child: Column(
+                  children: [
+                    DeliveryCardContents(delivery: delivery.toOrderSummary()),
+                    SizedBox(height: 16),
+                    //OrderProgression(status: _getStatusFromDelivery(delivery)),
+                    // TrackingHistory(),
+                    SizedBox(height: 16),
+                    PackageDetails(delivery: delivery),
+                    SizedBox(height: 16),
+                    AttachmentsFrame(delivery: delivery),
+                    // SizedBox(height: 16),
+                    // ContactsFrame(),
+                    SizedBox(height: 26),
+                    StepConfirmedButton(),
+                    SizedBox(height: 26),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+      );
   }
+
+  static StatusBarOrderType _getStatusFromDelivery(Delivery delivery){
+    var txt = delivery.toOrderSummary().status;
+
+    if(txt == "Packing") {
+      return StatusBarOrderType.packing;
+    }
+    else if(txt == "Ready To Ship"){
+      return StatusBarOrderType.ready;
+    }
+    else if (txt == "In Transit") {
+      return StatusBarOrderType.transit;
+    }
+    else{
+      return StatusBarOrderType.arrived;
+    }
+  }
+}
+
+_formatDate(DateTime deliverBy) {
+  // Custom formatter
+  final formatter = DateFormat("h:mm a"); // Example: 9:50 AM
+  var formatted = formatter.format(deliverBy);
+
+  // Add periods into AM/PM manually
+  formatted = formatted.replaceAll("AM", "A.M.").replaceAll("PM", "P.M.");
+
+  return formatted;
 }
 
 class StepConfirmedButton extends StatelessWidget{
@@ -89,7 +164,12 @@ class StepConfirmedButton extends StatelessWidget{
       height: 48,
       child: ElevatedButton(
           onPressed: (){
-            //TODO go to verification
+            Navigator.push(
+              context,
+              MaterialPageRoute<void>(
+                builder: (context) => const DeliveryConfirmation(),
+              ),
+            );
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.stepActive, // button background color
@@ -215,7 +295,9 @@ class ContactsFrame extends StatelessWidget {
 }
 
 class AttachmentsFrame extends StatelessWidget{
-  const AttachmentsFrame({super.key});
+  List<Attachment> attachments;
+
+  AttachmentsFrame({super.key, required Delivery delivery}): attachments = delivery.attachments;
 
   @override
   Widget build(BuildContext context) {
@@ -231,37 +313,82 @@ class AttachmentsFrame extends StatelessWidget{
             ),
           ),
         ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          // image icon
-          children: [
-            Image.asset(
-              'assets/image_icon.png',
-              width: 84,
-              height: 84,
-              fit: BoxFit.contain, // or cover, fill, etc.
-            ),
-            Image.asset(
-              'assets/image_icon.png',
-              width: 84,
-              height: 84,
-              fit: BoxFit.contain, // or cover, fill, etc.
-            ),
-            Image.asset(
-              'assets/more_icon.png',
-              width: 84,
-              height: 84,
-              fit: BoxFit.contain, // or cover, fill, etc.
-            )
-          ]
+        SizedBox(
+          height: 150,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: attachments.length,
+            itemBuilder: (context, index) {
+              return Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: WebImage(url: attachments[index].downloadUrl),
+              );
+            },
+            // mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            // image icon
+            // children: [
+            //   Image.asset(
+            //     'assets/image_icon.png',
+            //     width: 84,
+            //     height: 84,
+            //     fit: BoxFit.contain, // or cover, fill, etc.
+            //   ),
+            //   Image.asset(
+            //     'assets/image_icon.png',
+            //     width: 84,
+            //     height: 84,
+            //     fit: BoxFit.contain, // or cover, fill, etc.
+            //   ),
+            //   Image.asset(
+            //     'assets/more_icon.png',
+            //     width: 84,
+            //     height: 84,
+            //     fit: BoxFit.contain, // or cover, fill, etc.
+            //   )
+            // ]
+          ),
         ),
       ],
     );
   }
 }
 
+class WebImage extends StatelessWidget{
+  final String url;
+
+  const WebImage({
+    super.key,
+    required this.url,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Image.network(
+      url,
+      fit: BoxFit.contain,
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) return child; // finished loading
+        return const Center(
+          child: CircularProgressIndicator(),
+        );
+      },
+      errorBuilder: (context, error, stackTrace) {
+        return const Center(
+          child: Icon(
+            Icons.broken_image,
+            size: 48,
+            color: Colors.grey,
+          ),
+        );
+      },
+    );
+  }
+}
+
 class PackageDetails extends StatelessWidget{
-  const PackageDetails({super.key});
+  final List<DeliveryPart> partsList;
+
+  PackageDetails({super.key, required Delivery delivery}): partsList = delivery.packageDetails;
 
   @override
   Widget build(BuildContext context) {
@@ -277,7 +404,7 @@ class PackageDetails extends StatelessWidget{
             ),
           ),
         ),
-        PartsDataTable(),
+        PartsDataTable(partsList: partsList),
       ],
     );
   }
@@ -546,18 +673,30 @@ class OrderStageTable extends StatelessWidget {
 }
 
 class PartsDataTable extends StatelessWidget {
-  const PartsDataTable({super.key});
+  List<Map<String, dynamic>> parts;
+
+  PartsDataTable({super.key, required List<DeliveryPart> partsList}): parts = PartsDataTable._partsListToMap(partsList);
+
+  static List<Map<String, dynamic>> _partsListToMap(List<DeliveryPart> partsList) {
+    return partsList.map((part) {
+      return {
+        "code": part.code,
+        "name": part.name,
+        "qty": part.quantity
+      };
+    }).toList();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final parts = [
-      {"code": "MY-PRO-0001", "name": "Brake Pads for Proton Saga", "qty": 12},
-      {"code": "MY-PER-0002", "name": "Oil Filters for Perodua Myvi", "qty": 25},
-      {"code": "MY-PRO-0003", "name": "Air Filters for Proton Persona", "qty": 18},
-      {"code": "MY-PER-0004", "name": "Timing Belts for Perodua Axia", "qty": 10},
-      {"code": "MY-PRO-0005", "name": "Spark Plugs for Proton Iriz", "qty": 40},
-      {"code": "MY-PER-0006", "name": "Shock Absorbers for Perodua Bezza", "qty": 7},
-    ];
+    // final parts = [
+    //   {"code": "MY-PRO-0001", "name": "Brake Pads for Proton Saga", "qty": 12},
+    //   {"code": "MY-PER-0002", "name": "Oil Filters for Perodua Myvi", "qty": 25},
+    //   {"code": "MY-PRO-0003", "name": "Air Filters for Proton Persona", "qty": 18},
+    //   {"code": "MY-PER-0004", "name": "Timing Belts for Perodua Axia", "qty": 10},
+    //   {"code": "MY-PRO-0005", "name": "Spark Plugs for Proton Iriz", "qty": 40},
+    //   {"code": "MY-PER-0006", "name": "Shock Absorbers for Perodua Bezza", "qty": 7},
+    // ];
 
     return Container(
       width: double.infinity,

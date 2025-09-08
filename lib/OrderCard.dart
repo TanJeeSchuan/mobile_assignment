@@ -14,6 +14,7 @@ class DeliveryCard extends StatelessWidget{
 
   @override
   Widget build(BuildContext context) {
+
     return
       Container(
         margin: const EdgeInsets.symmetric(horizontal: 22,vertical: 16),
@@ -48,7 +49,9 @@ class DeliveryCard extends StatelessWidget{
                         Navigator.push(
                           context,
                           MaterialPageRoute<void>(
-                            builder: (context) => const OrderDetail(),
+                            builder: (context) => OrderDetail(
+                              deliveryId: delivery.orderId,
+                            ),
                           ),
                         );
                       },
@@ -183,6 +186,7 @@ class DeliveryCardContents extends StatelessWidget{
     );
   }
 
+
   static StatusBarOrderType _getStatusFromDelivery(OrderSummary delivery) {
     var txt = delivery.status;
 
@@ -271,12 +275,16 @@ class OrderProgression extends StatelessWidget{
             status: statusList[0],
           ),
         ),
-        Align(
-          alignment: Alignment.topCenter, // vertical center
-          child: Icon(
-            Icons.arrow_forward_ios,
-            size: arrowSize,
-          ),
+        Column(
+          children: [
+            Icon(
+              Icons.arrow_forward_ios,
+              size: arrowSize,
+            ),
+            SizedBox(
+              height: 40,
+            )
+          ],
         ),
         Expanded(
           child: OrderProgressIcon(
