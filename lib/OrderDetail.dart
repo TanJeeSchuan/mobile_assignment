@@ -54,7 +54,7 @@ class OrderDetail extends StatelessWidget{
                   subheading: "Loading Details..."
               ),
               body: Center(
-                child: Text('Error: ${asyncSnapshot.error}'),
+                child: CircularProgressIndicator(),
               ),
             );
             // return const Center(
@@ -106,7 +106,7 @@ class OrderDetail extends StatelessWidget{
                     DeliveryCardContents(delivery: delivery.toOrderSummary()),
                     SizedBox(height: 16),
                     //OrderProgression(status: _getStatusFromDelivery(delivery)),
-                    // TrackingHistory(),
+                    TrackingHistory(),
                     SizedBox(height: 16),
                     PackageDetails(delivery: delivery),
                     SizedBox(height: 16),
@@ -698,6 +698,8 @@ class PartsDataTable extends StatelessWidget {
     //   {"code": "MY-PER-0006", "name": "Shock Absorbers for Perodua Bezza", "qty": 7},
     // ];
 
+    return ItemsTable(items: parts);
+
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.all(12),
@@ -742,6 +744,86 @@ class PartsDataTable extends StatelessWidget {
             ]);
           }).toList(),
         ),
+      ),
+    );
+  }
+}
+
+class ScheduleTable extends StatelessWidget {
+  final List<Map<String, dynamic>> stages;
+
+  const ScheduleTable({
+    Key? key,
+    required this.stages,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Table(
+        columnWidths: const {
+          0: FixedColumnWidth(120),
+          1: FlexColumnWidth(),
+          2: FixedColumnWidth(50),
+        },
+        border: TableBorder(
+          horizontalInside: BorderSide(color: Colors.grey.shade300),
+        ),
+        children: [
+          // header row
+          TableRow(
+            decoration: BoxDecoration(
+                color: Colors.grey.shade50),
+            children: const [
+              Padding(
+                padding: EdgeInsets.all(8.0),
+                child: Text('Stage',
+                    style:
+                    TextStyle(fontWeight: FontWeight.w700)),
+              ),
+              Padding(
+                padding: EdgeInsets.all(8.0),
+                child: Text('Status',
+                    style:
+                    TextStyle(fontWeight: FontWeight.w700)),
+              ),
+              Padding(
+                padding: EdgeInsets.all(8.0),
+                child: Text('Time',
+                    style:
+                    TextStyle(fontWeight: FontWeight.w700),
+                    textAlign: TextAlign.center),
+              ),
+            ],
+          ),
+          // item rows
+          ...stages.map((it) {
+            return TableRow(children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                    vertical: 10, horizontal: 8),
+                child: Text(it['stage'],
+                    style: const TextStyle(fontSize: 13)),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                    vertical: 10, horizontal: 8),
+                child: Text(it['status'],
+                    style: const TextStyle(fontSize: 13)),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                    vertical: 10, horizontal: 8),
+                child: Text(it['time'].toString(),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 13)),
+              ),
+            ]);
+          }).toList(),
+        ],
       ),
     );
   }

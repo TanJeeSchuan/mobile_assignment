@@ -66,3 +66,82 @@ class LabelWithSymbolAndValue extends StatelessWidget {
   }
 }
 
+class ItemsTable extends StatelessWidget {
+  final List<Map<String, dynamic>> items;
+
+  const ItemsTable({
+    Key? key,
+    required this.items,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Table(
+        columnWidths: const {
+          0: FixedColumnWidth(120),
+          1: FlexColumnWidth(),
+          2: FixedColumnWidth(50),
+        },
+        border: TableBorder(
+          horizontalInside: BorderSide(color: Colors.grey.shade300),
+        ),
+        children: [
+          // header row
+          TableRow(
+            decoration: BoxDecoration(
+                color: Colors.grey.shade50),
+            children: const [
+              Padding(
+                padding: EdgeInsets.all(8.0),
+                child: Text('Code',
+                    style:
+                    TextStyle(fontWeight: FontWeight.w700)),
+              ),
+              Padding(
+                padding: EdgeInsets.all(8.0),
+                child: Text('Item Name',
+                    style:
+                    TextStyle(fontWeight: FontWeight.w700)),
+              ),
+              Padding(
+                padding: EdgeInsets.all(8.0),
+                child: Text('Qty',
+                    style:
+                    TextStyle(fontWeight: FontWeight.w700),
+                    textAlign: TextAlign.center),
+              ),
+            ],
+          ),
+          // item rows
+          ...items.map((it) {
+            return TableRow(children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                    vertical: 10, horizontal: 8),
+                child: Text(it['code'],
+                    style: const TextStyle(fontSize: 13)),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                    vertical: 10, horizontal: 8),
+                child: Text(it['name'],
+                    style: const TextStyle(fontSize: 13)),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                    vertical: 10, horizontal: 8),
+                child: Text(it['qty'].toString(),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 13)),
+              ),
+            ]);
+          }).toList(),
+        ],
+      ),
+    );
+  }
+}

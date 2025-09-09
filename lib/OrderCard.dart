@@ -6,6 +6,7 @@ import 'Defines.dart';
 import 'GeneralWidgets.dart';
 import 'OrderDetail.dart';
 import 'OrderVerification.dart';
+import 'orderVerified.dart';
 
 class DeliveryCard extends StatelessWidget{
   final OrderSummary delivery;
@@ -72,7 +73,7 @@ class DeliveryCard extends StatelessWidget{
                         Navigator.push(
                           context,
                           MaterialPageRoute<void>(
-                            builder: (context) => const DeliveryConfirmation(),
+                            builder: (context) => const PickupConfirmationPage(),
                           ),
                         );
                       },
