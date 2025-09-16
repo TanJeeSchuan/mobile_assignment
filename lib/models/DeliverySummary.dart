@@ -1,5 +1,5 @@
 
-class OrderSummary {
+class DeliverySummary {
   final String orderId;
   final String deliverBy;
   final int weight;
@@ -7,7 +7,7 @@ class OrderSummary {
   final String source;
   final String destination;
 
-  OrderSummary({
+  DeliverySummary({
     required this.orderId,
     required this.deliverBy,
     required this.weight,
@@ -16,8 +16,8 @@ class OrderSummary {
     required this.destination
   });
 
-  factory OrderSummary.fromJson(Map<String, dynamic> json){
-    return OrderSummary(
+  factory DeliverySummary.fromJson(Map<String, dynamic> json){
+    return DeliverySummary(
       orderId: json['deliveryId'] ?? "",
       deliverBy: json['deliverBy'] ?? "",
       weight: json['weight'] ?? "",
@@ -26,6 +26,4 @@ class OrderSummary {
       destination: json['destination'] ?? "Unknown",
     );
   }
-
-
 }

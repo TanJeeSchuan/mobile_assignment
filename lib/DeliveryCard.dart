@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:mobile_assignment/models/OrderSummary.dart';
+import 'package:go_router/go_router.dart';
+import 'package:mobile_assignment/models/DeliverySummary.dart';
 
 import 'AppColors.dart';
 import 'Defines.dart';
 import 'GeneralWidgets.dart';
-import 'OrderDetail.dart';
-import 'OrderVerification.dart';
-import 'orderVerified.dart';
+import 'DeliveryDetail.dart';
+import 'DropoffVerification.dart';
+import 'PickupVerification.dart';
+import 'navigation/DeliveryNavigation.dart';
 
 class DeliveryCard extends StatelessWidget{
-  final OrderSummary delivery;
+  final DeliverySummary delivery;
 
   const DeliveryCard({super.key, required this.delivery});
 
@@ -47,14 +49,15 @@ class DeliveryCard extends StatelessWidget{
                 Expanded(
                     child: ElevatedButton (
                       onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute<void>(
-                            builder: (context) => OrderDetail(
-                              deliveryId: delivery.orderId,
-                            ),
-                          ),
-                        );
+                        context.push('/home/deliveryDetail/${delivery.orderId}');
+                        // Navigator.push(
+                        //   context,
+                        //   MaterialPageRoute<void>(
+                        //     builder: (context) => OrderDetail(
+                        //       deliveryId: delivery.orderId,
+                        //     ),
+                        //   ),
+                        // );
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.transit, // button background color
@@ -69,14 +72,9 @@ class DeliveryCard extends StatelessWidget{
                 SizedBox(width: 52,),
                 Expanded(
                     child: ElevatedButton (
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute<void>(
-                            builder: (context) => const PickupConfirmationPage(),
-                          ),
-                        );
-                      },
+                      onPressed: confirmButtonEnabled(delivery) ?
+                        () => handleDeliveryNavigation(context, delivery)
+                        : null,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.stepActive, // button background color
                         foregroundColor: Colors.white, // text/icon color
@@ -93,10 +91,24 @@ class DeliveryCard extends StatelessWidget{
         ),
       );
   }
+
+  // bool _confirmButtonEnabled(OrderSummary delivery) {
+  //   return delivery.status == "Ready To Ship" || delivery.status == "In Transit";
+  // }
 }
 
+
+navigateToVerification(DeliverySummary delivery, BuildContext context){
+  if(delivery.status == "Ready To Ship"){
+    context.push('/home/deliveryDetail/${delivery.orderId}/pickupVerification');
+  } else {
+    context.push('/home/deliveryDetail/${delivery.orderId}/dropoffVerification');
+  }
+}
+
+
 class DeliveryCardContents extends StatelessWidget{
-  final OrderSummary delivery;
+  final DeliverySummary delivery;
   final StatusBarOrderType status;
 
   DeliveryCardContents({
@@ -188,7 +200,7 @@ class DeliveryCardContents extends StatelessWidget{
   }
 
 
-  static StatusBarOrderType _getStatusFromDelivery(OrderSummary delivery) {
+  static StatusBarOrderType _getStatusFromDelivery(DeliverySummary delivery) {
     var txt = delivery.status;
 
     if(txt == "Packing") {

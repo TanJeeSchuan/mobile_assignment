@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mobile_assignment/service/DeliveryService.dart';
 import 'package:intl/intl.dart';
 
 import 'AppColors.dart';
 import 'Defines.dart';
 import 'GeneralWidgets.dart';
-import 'OrderCard.dart';
-import 'OrderVerification.dart';
+import 'DeliveryCard.dart';
+import 'DropoffVerification.dart';
 import 'models/Delivery.dart';
 import 'models/Part.dart';
 
@@ -31,20 +32,48 @@ final List<OrderStage> orderStages = [
 ];
 
 
-class OrderDetail extends StatelessWidget{
+class OrderDetail extends StatefulWidget{
   final String deliveryId;
 
   OrderDetail({super.key, required this.deliveryId});
 
+  @override
+  State<OrderDetail> createState() => _OrderDetailState();
+
+  static StatusBarOrderType _getStatusFromDelivery(Delivery delivery){
+    var txt = delivery.toOrderSummary().status;
+
+    if(txt == "Packing") {
+      return StatusBarOrderType.packing;
+    }
+    else if(txt == "Ready To Ship"){
+      return StatusBarOrderType.ready;
+    }
+    else if (txt == "In Transit") {
+      return StatusBarOrderType.transit;
+    }
+    else{
+      return StatusBarOrderType.arrived;
+    }
+  }
+}
+
+class _OrderDetailState extends State<OrderDetail> {
+  late Future<Delivery?> _deliveryFuture;
+
   Future<Delivery?> fetchDelivery(deliveryId) async {
-    print(deliveryId);
     return await DeliveryService().fetchDeliveryDetail(deliveryId);
+  }
+
+  @override initState(){
+    super.initState();
+    _deliveryFuture = fetchDelivery(widget.deliveryId);
   }
 
   @override
   Widget build(BuildContext context) {
     return FutureBuilder(
-        future: fetchDelivery(deliveryId),
+        future: _deliveryFuture,
         builder: (context, asyncSnapshot) {
           if (asyncSnapshot.connectionState == ConnectionState.waiting) {
             return Scaffold(
@@ -57,9 +86,6 @@ class OrderDetail extends StatelessWidget{
                 child: CircularProgressIndicator(),
               ),
             );
-            // return const Center(
-            //   child: CircularProgressIndicator(),
-            // );
           }
 
           if (asyncSnapshot.hasError) {
@@ -106,7 +132,7 @@ class OrderDetail extends StatelessWidget{
                     DeliveryCardContents(delivery: delivery.toOrderSummary()),
                     SizedBox(height: 16),
                     //OrderProgression(status: _getStatusFromDelivery(delivery)),
-                    TrackingHistory(),
+                    TrackingHistory(delivery: delivery),
                     SizedBox(height: 16),
                     PackageDetails(delivery: delivery),
                     SizedBox(height: 16),
@@ -114,7 +140,7 @@ class OrderDetail extends StatelessWidget{
                     // SizedBox(height: 16),
                     // ContactsFrame(),
                     SizedBox(height: 26),
-                    StepConfirmedButton(),
+                    StepConfirmedButton(delivery: delivery),
                     SizedBox(height: 26),
                   ],
                 ),
@@ -123,23 +149,6 @@ class OrderDetail extends StatelessWidget{
           );
         }
       );
-  }
-
-  static StatusBarOrderType _getStatusFromDelivery(Delivery delivery){
-    var txt = delivery.toOrderSummary().status;
-
-    if(txt == "Packing") {
-      return StatusBarOrderType.packing;
-    }
-    else if(txt == "Ready To Ship"){
-      return StatusBarOrderType.ready;
-    }
-    else if (txt == "In Transit") {
-      return StatusBarOrderType.transit;
-    }
-    else{
-      return StatusBarOrderType.arrived;
-    }
   }
 }
 
@@ -155,7 +164,9 @@ _formatDate(DateTime deliverBy) {
 }
 
 class StepConfirmedButton extends StatelessWidget{
-  const StepConfirmedButton({super.key});
+  final Delivery delivery;
+
+  StepConfirmedButton({super.key, required Delivery this.delivery});
 
   @override
   Widget build(BuildContext context) {
@@ -164,12 +175,13 @@ class StepConfirmedButton extends StatelessWidget{
       height: 48,
       child: ElevatedButton(
           onPressed: (){
-            Navigator.push(
-              context,
-              MaterialPageRoute<void>(
-                builder: (context) => const DeliveryConfirmation(),
-              ),
-            );
+            context.push('/home/deliveryDetail/${delivery.delivery_id}/dropoffVerification');
+            // Navigator.push(
+            //   context,
+            //   MaterialPageRoute<void>(
+            //     builder: (context) => const DropoffVerification(),
+            //   ),
+            // );
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.stepActive, // button background color
@@ -386,9 +398,10 @@ class WebImage extends StatelessWidget{
 }
 
 class PackageDetails extends StatelessWidget{
-  final List<DeliveryPart> partsList;
+  // final List<DeliveryPart> partsList;
+  final Delivery delivery;
 
-  PackageDetails({super.key, required Delivery delivery}): partsList = delivery.packageDetails;
+  PackageDetails({super.key, required Delivery delivery}): this.delivery = delivery;
 
   @override
   Widget build(BuildContext context) {
@@ -404,14 +417,15 @@ class PackageDetails extends StatelessWidget{
             ),
           ),
         ),
-        PartsDataTable(partsList: partsList),
+        PartsDataTable(delivery: delivery,),
       ],
     );
   }
 }
 
 class TrackingHistory extends StatelessWidget{
-  const TrackingHistory({super.key});
+  final Delivery delivery;
+  TrackingHistory({super.key, required this.delivery});
 
   @override
   Widget build(BuildContext context) {
@@ -427,7 +441,7 @@ class TrackingHistory extends StatelessWidget{
             ),
           ),
         ),
-        const OrderStageTable(),
+        ScheduleTable(stages: delivery.toStages()),
       ],
     );
   }
@@ -675,17 +689,17 @@ class OrderStageTable extends StatelessWidget {
 class PartsDataTable extends StatelessWidget {
   List<Map<String, dynamic>> parts;
 
-  PartsDataTable({super.key, required List<DeliveryPart> partsList}): parts = PartsDataTable._partsListToMap(partsList);
+  PartsDataTable({super.key, required Delivery delivery }): parts = delivery.partsListToMap();  //parts = PartsDataTable._partsListToMap(partsList);
 
-  static List<Map<String, dynamic>> _partsListToMap(List<DeliveryPart> partsList) {
-    return partsList.map((part) {
-      return {
-        "code": part.code,
-        "name": part.name,
-        "qty": part.quantity
-      };
-    }).toList();
-  }
+  // static List<Map<String, dynamic>> _partsListToMap(List<DeliveryPart> partsList) {
+  //   return partsList.map((part) {
+  //     return {
+  //       "code": part.code,
+  //       "name": part.name,
+  //       "qty": part.quantity
+  //     };
+  //   }).toList();
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -697,55 +711,7 @@ class PartsDataTable extends StatelessWidget {
     //   {"code": "MY-PRO-0005", "name": "Spark Plugs for Proton Iriz", "qty": 40},
     //   {"code": "MY-PER-0006", "name": "Shock Absorbers for Perodua Bezza", "qty": 7},
     // ];
-
     return ItemsTable(items: parts);
-
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.all(12),
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 6,
-            offset: Offset(0, 3),
-          ),
-        ],
-      ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: DataTable(
-          columnSpacing: 0,
-          headingRowHeight: 16,
-          dataRowMinHeight: 0,
-          dataRowMaxHeight: double.infinity,
-          columns: const [
-            DataColumn(label: Text('Code', style: TextStyle(fontWeight: FontWeight.bold))),
-            DataColumn(label: Text('Item Name', style: TextStyle(fontWeight: FontWeight.bold))),
-            DataColumn(label: Text('Qty', style: TextStyle(fontWeight: FontWeight.bold))),
-          ],
-          rows: parts.map((part) {
-            return DataRow(cells: [
-              DataCell(Padding(
-                padding: const EdgeInsets.all(0.0),
-                child: Text(part["code"].toString()),
-              )),
-              DataCell(Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Text(part["name"].toString()),
-              )),
-              DataCell(Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Text(part["qty"].toString()),
-              )),
-            ]);
-          }).toList(),
-        ),
-      ),
-    );
   }
 }
 
@@ -767,7 +733,7 @@ class ScheduleTable extends StatelessWidget {
         columnWidths: const {
           0: FixedColumnWidth(120),
           1: FlexColumnWidth(),
-          2: FixedColumnWidth(50),
+          2: FixedColumnWidth(200),
         },
         border: TableBorder(
           horizontalInside: BorderSide(color: Colors.grey.shade300),
@@ -795,7 +761,7 @@ class ScheduleTable extends StatelessWidget {
                 child: Text('Time',
                     style:
                     TextStyle(fontWeight: FontWeight.w700),
-                    textAlign: TextAlign.center),
+                    textAlign: TextAlign.left),
               ),
             ],
           ),
@@ -805,21 +771,27 @@ class ScheduleTable extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.symmetric(
                     vertical: 10, horizontal: 8),
-                child: Text(it['stage'],
-                    style: const TextStyle(fontSize: 13)),
+                child: Text(
+                  it['stage']?.toString() ?? 'N/A',
+                  style: const TextStyle(fontSize: 13),
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.symmetric(
+                    vertical: 10, horizontal: 8),
+                child: Text(
+                  it['status']?.toString() ?? 'N/As',
+                  style: TextStyle(fontSize: 13),
+                ),
               ),
               Padding(
                 padding: const EdgeInsets.symmetric(
                     vertical: 10, horizontal: 8),
-                child: Text(it['status'],
-                    style: const TextStyle(fontSize: 13)),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                    vertical: 10, horizontal: 8),
-                child: Text(it['time'].toString(),
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 13)),
+                child: Text(
+                  it['timestamp']?.toString() ?? 'N/A',
+                  textAlign: TextAlign.left,
+                  style: const TextStyle(fontSize: 13),
+                ),
               ),
             ]);
           }).toList(),

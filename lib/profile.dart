@@ -3,10 +3,12 @@ import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mobile_assignment/main.dart';
 import 'package:http/http.dart' as http;
 
 import 'login.dart';
+import 'models/UserData.dart';
 
 // void main() {
 //   runApp(const StaffDetailsApp());
@@ -23,43 +25,60 @@ import 'login.dart';
 //     );
 //   }
 // }
-class _userData {
-  late String id;
-  late String staffId;
-  late String staffName;
-  late String contactNumber;
-  late String staffEmail;
 
-  _userData(this.id, this.staffId, this.staffName, this.contactNumber, this.staffEmail);
 
-  factory _userData.fromFirestore(String id, Map<String, dynamic> data) {
-    return _userData(
-      id,
-      data["StaffID"]?.toString() ?? "",   // 🔥 convert to String
-      data["StaffName"] ?? "",
-      data["StaffContact"] ?? "",
-      data["StaffEmail"] ?? "",
-    );
-  }
+class StaffDetailsPage extends StatefulWidget {
 
-  // Factory constructor for JSON map (from HTTP or Firestore-like map with 'id' inside)
-  factory _userData.fromJson(Map<String, dynamic> json) {
-    return _userData(
-      json['id']?.toString() ?? "",              // Use id field if included in JSON
-      json['StaffID']?.toString() ?? "",        // convert to String safely
-      json['StaffName'] ?? "",
-      json['StaffContact'] ?? "",
-      json['StaffEmail'] ?? "",
+  StaffDetailsPage({super.key});
+  @override
+  State<StaffDetailsPage> createState() => _StaffDetailsPageState();
+
+  static Widget buildReadOnlyField(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 6),
+          TextFormField(
+            initialValue: value,
+            enabled: false, // read-only
+            style: const TextStyle(
+              color: Colors.black, // keep text black
+              fontSize: 16,
+            ),
+            cursorColor: Colors.transparent, // hide cursor
+            decoration: const InputDecoration(
+              border: OutlineInputBorder(
+                borderSide: BorderSide(color: Colors.grey),
+              ),
+              disabledBorder: OutlineInputBorder(
+                borderSide: BorderSide(color: Colors.grey), // grey border
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderSide: BorderSide(color: Colors.grey), // no blue glow
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderSide: BorderSide(color: Colors.grey), // consistent grey
+              ),
+              isDense: true,
+              contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
-class StaffDetailsPage extends StatelessWidget {
+class _StaffDetailsPageState extends State<StaffDetailsPage> {
+  UserData? userData;
 
-  StaffDetailsPage({super.key});
-  _userData? userData;
-
-  Future<_userData?> retrieveUserData() async {
+  Future<UserData?> retrieveUserData() async {
     try {
       // final querySnapshot = await FirebaseFirestore.instance
       //     .collection("users")
@@ -81,7 +100,7 @@ class StaffDetailsPage extends StatelessWidget {
       );
 
       if (response.statusCode == 200) {
-        return _userData.fromJson(jsonDecode(response.body));
+        return UserData.fromJson(jsonDecode(response.body));
       } else {
         print('Error: ${response.statusCode} - ${response.body}');
       }
@@ -147,9 +166,9 @@ class StaffDetailsPage extends StatelessWidget {
                     ],
                   ),
                 ),
-          
+
                 const SizedBox(height: 20),
-          
+
                 // Card
                 Expanded(
                   child: Center(
@@ -182,7 +201,7 @@ class StaffDetailsPage extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 16),
-          
+
                           // Welcome Text
                           Text(
                             "Welcome, ${userData!.staffName}\nStaff ID: ${userData!.staffId}",
@@ -193,18 +212,18 @@ class StaffDetailsPage extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 20),
-          
+
                           // Full Name
-                          buildReadOnlyField("Full Name", userData!.staffName),
+                          StaffDetailsPage.buildReadOnlyField("Full Name", userData!.staffName),
 
                           // Contact Number
-                          buildReadOnlyField("Contact Number", userData!.contactNumber),
+                          StaffDetailsPage.buildReadOnlyField("Contact Number", userData!.contactNumber),
 
                           // Email
-                          buildReadOnlyField("Email", userData!.staffEmail),
+                          StaffDetailsPage.buildReadOnlyField("Email", userData!.staffEmail),
 
                           const SizedBox(height: 30),
-          
+
                           // Logout Button
                           SizedBox(
                             width: double.infinity,
@@ -214,10 +233,14 @@ class StaffDetailsPage extends StatelessWidget {
                                   var _auth = FirebaseAuth.instance;
                                   await _auth.signOut();
                                   // Navigate to login screen after successful logout
-                                  Navigator.of(context).pushAndRemoveUntil(
-                                    MaterialPageRoute(builder: (context) => MainApp()),
-                                        (Route<dynamic> route) => false, // This predicate always returns false, removing all routes
-                                  );
+                                  // Check if the widget is still mounted
+                                  if (!mounted) return;
+                                  context.go('/login');
+
+                                  // Navigator.of(context).pushAndRemoveUntil(
+                                  //   MaterialPageRoute(builder: (context) => MainApp()),
+                                  //       (Route<dynamic> route) => false, // This predicate always returns false, removing all routes
+                                  // );
                                 } catch (e) {
                                   print('Error during logout: $e');
                                   // Handle logout errors, e.g., show a SnackBar
@@ -249,48 +272,6 @@ class StaffDetailsPage extends StatelessWidget {
             ),
           );
         }
-      ),
-    );
-  }
-
-  // ✅ Read-only text field with grey border
-  static Widget buildReadOnlyField(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 6),
-          TextFormField(
-            initialValue: value,
-            enabled: false, // read-only
-            style: const TextStyle(
-              color: Colors.black, // keep text black
-              fontSize: 16,
-            ),
-            cursorColor: Colors.transparent, // hide cursor
-            decoration: const InputDecoration(
-              border: OutlineInputBorder(
-                borderSide: BorderSide(color: Colors.grey),
-              ),
-              disabledBorder: OutlineInputBorder(
-                borderSide: BorderSide(color: Colors.grey), // grey border
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderSide: BorderSide(color: Colors.grey), // no blue glow
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderSide: BorderSide(color: Colors.grey), // consistent grey
-              ),
-              isDense: true,
-              contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-            ),
-          ),
-        ],
       ),
     );
   }

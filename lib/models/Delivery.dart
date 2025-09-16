@@ -1,6 +1,6 @@
 import 'dart:core';
 import '../Defines.dart';
-import 'OrderSummary.dart';
+import 'DeliverySummary.dart';
 import 'Workshop.dart';
 import 'Warehouse.dart';
 import 'Part.dart';
@@ -58,8 +58,8 @@ class Delivery {
     };
   }
 
-  OrderSummary toOrderSummary() {
-    return OrderSummary(
+  DeliverySummary toOrderSummary() {
+    return DeliverySummary(
       orderId: delivery_id ?? 'N/A',  // Provide a default value if delivery_id is null
       deliverBy: deliverBy.toString(),
       weight: weight.toInt(),
@@ -69,8 +69,20 @@ class Delivery {
     );
   }
 
-  /// Returns the last completed stage from the list of stages.
-  /// Returns null if no stages are completed.
+  List<Map<String, dynamic>> toStages() {
+    return stages.map((stage) => stage.toReadable()).toList();
+  }
+
+  List<Map<String, dynamic>> partsListToMap() {
+    return packageDetails.map((part) {
+      return {
+        "code": part.code,
+        "name": part.name,
+        "qty": part.quantity
+      };
+    }).toList();
+  }
+
   static String? getLastCompleteStage(List<Stage> stageList) {
     String? lastCompleted;
     
@@ -101,6 +113,10 @@ class Delivery {
         return "Unknown";
     }
   }
+
+  String getCurrentStage() {
+    return getLastCompleteStage(stages) ?? 'Unknown';
+  }
 }
 
 class DeliveryPart {
@@ -129,6 +145,8 @@ class DeliveryPart {
       'qty': quantity, // Changed from 'quantity' to 'qty' to match JSON
     };
   }
+
+
 }
 
 class Attachment {
@@ -184,6 +202,39 @@ class Stage {
       'status': status.toJson(),
       'timestamp': timestamp?.toIso8601String(),
     };
+  }
+
+  Map<String, dynamic> toReadable() {
+    return {
+      "stage": stageToReadable(stage),
+      "status": status.booleanValue ? "Completed" : "Pending",
+      "timestamp": timestamp != null 
+          ? '${timestamp!.day} ${_getMonthAbbreviation(timestamp!.month)}, ${timestamp!.hour.toString().padLeft(2, '0')}.${timestamp!.minute.toString().padLeft(2, '0')}${timestamp!.hour < 12 ? 'am' : 'pm'}' 
+          : 'N/A',
+    };
+  }
+
+  String _getMonthAbbreviation(int month) {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return months[month - 1];
+  }
+
+  String stageToReadable(String stage) {
+    switch (stage) {
+      case 'order_confirmed':
+        return "Order Confirmed";
+        break;
+      case 'packing_finished':
+        return "Packing Finished";
+      case 'package_pickup':
+        return "Package Pickup";
+      case 'package_dropoff':
+        return "Package Dropoff";
+      case 'order_complete':
+        return "Order Complete";
+      default:
+        return "Unknown";
+    }
   }
 }
 

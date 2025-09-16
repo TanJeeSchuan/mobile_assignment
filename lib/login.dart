@@ -1,7 +1,7 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_ui_auth/firebase_ui_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import 'dashboard.dart';
 
@@ -54,7 +54,6 @@ User? getCurrentUser(){
   var user = FirebaseAuth.instance.currentUser;
   return user;
 }
-
 
 class LoginCard extends StatelessWidget {
   LoginCard({super.key});
@@ -249,7 +248,11 @@ class LoginCard extends StatelessWidget {
           //   );
           // }
           else if (state is SignedIn){
-            return Dashboard();
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              context.go('/home');
+            });
+            //context.go('/home');
+            return Center(child: CircularProgressIndicator());
           }
           return Container();
         },
