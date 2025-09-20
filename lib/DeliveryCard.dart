@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile_assignment/models/DeliverySummary.dart';
+import 'package:shimmer/shimmer.dart';
 
 import 'AppColors.dart';
 import 'Defines.dart';
@@ -50,14 +51,6 @@ class DeliveryCard extends StatelessWidget{
                     child: ElevatedButton (
                       onPressed: () {
                         context.push('/home/deliveryDetail/${delivery.orderId}');
-                        // Navigator.push(
-                        //   context,
-                        //   MaterialPageRoute<void>(
-                        //     builder: (context) => OrderDetail(
-                        //       deliveryId: delivery.orderId,
-                        //     ),
-                        //   ),
-                        // );
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.transit, // button background color
@@ -95,6 +88,76 @@ class DeliveryCard extends StatelessWidget{
   // bool _confirmButtonEnabled(OrderSummary delivery) {
   //   return delivery.status == "Ready To Ship" || delivery.status == "In Transit";
   // }
+}
+
+class DeliveryCardShimmer extends StatelessWidget {
+  const DeliveryCardShimmer({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade300, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            spreadRadius: 1,
+            blurRadius: 4,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Shimmer.fromColors(
+        baseColor: Colors.grey.shade300,
+        highlightColor: Colors.grey.shade100,
+        child: Column(
+          children: [
+            // Fake DeliveryCardContents section
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(height: 18, width: 140, color: Colors.grey), // title
+                const SizedBox(height: 10),
+                Container(height: 14, width: 200, color: Colors.grey), // subtitle
+                const SizedBox(height: 10),
+                Container(height: 14, width: double.infinity, color: Colors.grey), // extra line
+              ],
+            ),
+            const SizedBox(height: 28),
+
+            // Fake buttons row
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: Colors.grey,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 52),
+                Expanded(
+                  child: Container(
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: Colors.grey,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 

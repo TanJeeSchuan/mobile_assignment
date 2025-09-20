@@ -3,6 +3,7 @@ import 'package:mobile_assignment/models/Delivery.dart';
 import 'package:mobile_assignment/service/AuthService.dart';
 import 'package:mobile_assignment/service/DeliveryService.dart';
 import 'package:mobile_assignment/service/UploadService.dart';
+import 'package:mobile_assignment/service/VerificationService.dart';
 import 'dart:typed_data';
 import 'package:signature/signature.dart';
 import 'package:image_picker/image_picker.dart';
@@ -476,6 +477,21 @@ class _DropoffVerificationState extends State<DropoffVerification> {
     var signature = _savedSignature;
     var proofFiles = _proofFiles;
 
+    // stageName = stageName == "package_pickup" ? "pickup" : "dropoff";
+
+    print("deliveryID: " + deliveryId);
+    print("stageName: " + stageName);
+    print("recipientName: " + recipientName);
+    print("employeeId: " + employeeId);
+    print("proofFiles: " + proofFiles.toString());
+
+    // double confirm all fields are valid
+    if (recipientName.isEmpty || employeeId.isEmpty || signature == null || proofFiles.isEmpty) {
+      // alert dialog
+      print("❌ All fields are required");
+      return;
+    }
+
     // ✅ Get current user from AuthService
     final currentUser = await AuthService.getCurrentUser();
     if (currentUser == null) {
@@ -483,13 +499,23 @@ class _DropoffVerificationState extends State<DropoffVerification> {
       return;
     }
 
+    // ✅ Upload proof files
+    List<String> urls = [];
     for (var file in proofFiles) {
-      uploadProofFile(deliveryId, currentUser.staffId, stageName, file);
+      String url = await uploadProofFile(deliveryId, currentUser.staffId, stageName, file);
+
+      urls.add(url);
     }
 
-    print("Recipient Name: $recipientName");
-    print("Employee ID: $employeeId");
-    print("Signature: $signature");
-    print("Proof Files: $proofFiles");
+    // ✅ Upload signature
+    String signatureUrl = await uploadSignatureFile(deliveryId, currentUser.staffId, stageName, signature);
+    print(signatureUrl);
+
+    VerificationService().verifyDelivery(deliveryId, stageName, urls, currentUser.staffId, currentUser.staffName, employeeId, recipientName);
+
+    // print("Recipient Name: $recipientName");
+    // print("Employee ID: $employeeId");
+    // print("Signature: $signature");
+    // print("Proof Files: $proofFiles");
   }
 }

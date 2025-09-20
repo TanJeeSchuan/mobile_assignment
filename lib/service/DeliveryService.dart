@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:mobile_assignment/DeliveryDetail.dart';
 import 'package:mobile_assignment/models/DeliverySummary.dart';
 
 import '../models/Delivery.dart';

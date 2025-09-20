@@ -1,31 +1,11 @@
-import 'dart:convert';
-
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:mobile_assignment/main.dart';
-import 'package:http/http.dart' as http;
+import 'package:mobile_assignment/service/AuthService.dart';
 
-import 'login.dart';
+import 'package:shimmer/shimmer.dart';
+
 import 'models/UserData.dart';
-
-// void main() {
-//   runApp(const StaffDetailsApp());
-// }
-
-// class StaffDetailsApp extends StatelessWidget {
-//   const StaffDetailsApp({super.key});
-//
-//   @override
-//   Widget build(BuildContext context) {
-//     return const MaterialApp(
-//       debugShowCheckedModeBanner: false,
-//       home: StaffDetailsPage(),
-//     );
-//   }
-// }
-
 
 class StaffDetailsPage extends StatefulWidget {
 
@@ -76,53 +56,70 @@ class StaffDetailsPage extends StatefulWidget {
 }
 
 class _StaffDetailsPageState extends State<StaffDetailsPage> {
-  UserData? userData;
+  late Future<UserData?> userDataFuture;
 
   Future<UserData?> retrieveUserData() async {
-    try {
-      // final querySnapshot = await FirebaseFirestore.instance
-      //     .collection("users")
-      //     .where("StaffEmail",
-      //     isEqualTo: FirebaseAuth.instance.currentUser?.email)
-      //     .limit(1)
-      //     .get();
+    return await AuthService.getCurrentUser();
+  }
 
-      var user = FirebaseAuth.instance.currentUser;
-      var email = user?.email;
-
-      final idToken = await user?.getIdToken();
-      final uri = Uri.parse('https://us-central1-mobile-assignment-f9fab.cloudfunctions.net/get_user_by_email?email=$email');
-      final response = await http.get(
-        uri,
-        headers: {
-          'Authorization': 'Bearer $idToken',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        return UserData.fromJson(jsonDecode(response.body));
-      } else {
-        print('Error: ${response.statusCode} - ${response.body}');
-      }
-
-      // if (querySnapshot.docs.isNotEmpty) {
-      //   var doc = querySnapshot.docs.single;
-      //   return _userData.fromFirestore(doc.id, doc.data());
-      // }
-    } catch (e) {
-      print("Error fetching users: $e");
-    }
-    return null;
+  @override
+  void initState() {
+    super.initState();
+    userDataFuture = retrieveUserData();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: FutureBuilder(
-        future: retrieveUserData(),
+        future: userDataFuture,
         builder: (context, asyncSnapshot) {
           if (asyncSnapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return SafeArea(
+              child: Column(
+                children: [
+                  const SizedBox(height: 20),
+                  Expanded(
+                    child: Center(
+                      child: Container(
+                        width: double.infinity,
+                        margin: const EdgeInsets.symmetric(horizontal: 20),
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.grey.shade300,
+                              blurRadius: 6,
+                              offset: const Offset(0, 3),
+                            )
+                          ],
+                        ),
+                        child: Shimmer.fromColors(
+                          baseColor: Colors.grey.shade300,
+                          highlightColor: Colors.grey.shade100,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const CircleAvatar(radius: 40, backgroundColor: Colors.grey),
+                              const SizedBox(height: 16),
+                              Container(height: 16, width: 120, color: Colors.grey),
+                              const SizedBox(height: 20),
+                              Container(height: 40, width: double.infinity, color: Colors.grey),
+                              const SizedBox(height: 16),
+                              Container(height: 40, width: double.infinity, color: Colors.grey),
+                              const SizedBox(height: 16),
+                              Container(height: 40, width: double.infinity, color: Colors.grey),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
           }
 
           if (!asyncSnapshot.hasData || asyncSnapshot.data == null) {
@@ -130,7 +127,6 @@ class _StaffDetailsPageState extends State<StaffDetailsPage> {
           }
 
           final user = asyncSnapshot.data!;
-          userData = user;
 
           return SafeArea(
             child: Column(
@@ -204,7 +200,7 @@ class _StaffDetailsPageState extends State<StaffDetailsPage> {
 
                           // Welcome Text
                           Text(
-                            "Welcome, ${userData!.staffName}\nStaff ID: ${userData!.staffId}",
+                            "Welcome, ${user.staffName}\nStaff ID: ${user.staffId}",
                             textAlign: TextAlign.center,
                             style: const TextStyle(
                               fontSize: 16,
@@ -214,13 +210,13 @@ class _StaffDetailsPageState extends State<StaffDetailsPage> {
                           const SizedBox(height: 20),
 
                           // Full Name
-                          StaffDetailsPage.buildReadOnlyField("Full Name", userData!.staffName),
+                          StaffDetailsPage.buildReadOnlyField("Full Name", user.staffName),
 
                           // Contact Number
-                          StaffDetailsPage.buildReadOnlyField("Contact Number", userData!.contactNumber),
+                          StaffDetailsPage.buildReadOnlyField("Contact Number", user.contactNumber),
 
                           // Email
-                          StaffDetailsPage.buildReadOnlyField("Email", userData!.staffEmail),
+                          StaffDetailsPage.buildReadOnlyField("Email", user.staffEmail),
 
                           const SizedBox(height: 30),
 
@@ -234,16 +230,35 @@ class _StaffDetailsPageState extends State<StaffDetailsPage> {
                                   await _auth.signOut();
                                   // Navigate to login screen after successful logout
                                   // Check if the widget is still mounted
-                                  if (!mounted) return;
-                                  context.go('/login');
+                                  // Show success dialog
+                                  showDialog(
+                                    context: context,
+                                    barrierDismissible: false, // force user to press button
+                                    builder: (context) => AlertDialog(
+                                      title: const Text("Logout Successful"),
+                                      content: const Text("You have been logged out."),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () {
+                                            Navigator.of(context).pop(); // close dialog
+                                            context.go('/login');        // navigate after dismiss
+                                          },
+                                          child: const Text("OK"),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                  // if (!mounted) return;
+                                  // context.go('/login');
 
                                   // Navigator.of(context).pushAndRemoveUntil(
                                   //   MaterialPageRoute(builder: (context) => MainApp()),
                                   //       (Route<dynamic> route) => false, // This predicate always returns false, removing all routes
                                   // );
                                 } catch (e) {
-                                  print('Error during logout: $e');
-                                  // Handle logout errors, e.g., show a SnackBar
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text("Logout failed: $e")),
+                                  );
                                 }
                               },
                               style: ElevatedButton.styleFrom(

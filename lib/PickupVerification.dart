@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_assignment/service/DeliveryService.dart';
+import 'package:mobile_assignment/service/VerificationService.dart';
 
+import 'AppColors.dart';
 import 'GeneralWidgets.dart';
 import 'models/Delivery.dart';
 
@@ -121,7 +123,7 @@ class _PickupConfirmationPageState extends State<PickupConfirmationPage> {
                         child: Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF00B0F0),
+                            color: AppColors.accentColor,//const Color(0xFF00B0F0),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: const Icon(Icons.arrow_back_ios_new,
@@ -130,17 +132,17 @@ class _PickupConfirmationPageState extends State<PickupConfirmationPage> {
                       ),
                       const SizedBox(width: 12),
                       const Icon(Icons.directions_car_rounded,
-                          size: 26, color: Color(0xFF69BFE8)),
+                          size: 26, color: AppColors.accentColor,),//const Color(0xFF00B0F0),Color(0xFF69BFE8)),
                       const SizedBox(width: 8),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          Text("Pickup Confirmation",
+                        children: [
+                          const Text("Pickup Confirmation",
                               style: TextStyle(
                                   fontSize: 20, fontWeight: FontWeight.w700)),
-                          SizedBox(height: 4),
-                          Text("Order #123456 (Batu Caves → Sentul)",
-                              style: TextStyle(fontSize: 13, color: Colors.black54)),
+                          const SizedBox(height: 4),
+                          Text("Delivery #${delivery.delivery_id.toString().toUpperCase()}",//123456 (Batu Caves → Sentul)",
+                              style: TextStyle(fontSize: 14, color: AppColors.subText)),
                         ],
                       ),
                     ],
@@ -154,9 +156,9 @@ class _PickupConfirmationPageState extends State<PickupConfirmationPage> {
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(18),
-                        boxShadow: const [
+                        boxShadow: [
                           BoxShadow(
-                            color: Color.fromRGBO(60, 60, 60, 0.12),
+                            color: AppColors.shadowColor,//Color.fromRGBO(60, 60, 60, 0.12),
                             offset: Offset(6, 10),
                             blurRadius: 22,
                           ),
@@ -169,7 +171,7 @@ class _PickupConfirmationPageState extends State<PickupConfirmationPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             // Title + divider
-                            const Text("Delivery #123456",
+                            Text("Delivery #${delivery.delivery_id.toString().toUpperCase()}",
                                 style: TextStyle(
                                     fontSize: 20, fontWeight: FontWeight.w800)),
                             const SizedBox(height: 12),
@@ -183,8 +185,10 @@ class _PickupConfirmationPageState extends State<PickupConfirmationPage> {
                                     horizontal: 18, vertical: 8),
                                 decoration: BoxDecoration(
                                   color: _verified
-                                      ? const Color(0xFFDFF7E4)
-                                      : const Color(0xFFF9D6D6),
+                                  ? AppColors.verifiedColor
+                                  : AppColors.unverifiedColor,
+                                      // ? const Color(0xFFDFF7E4)
+                                      // : const Color(0xFFF9D6D6),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(_verified ? 'Verified' : 'Unverified',
@@ -242,16 +246,16 @@ class _PickupConfirmationPageState extends State<PickupConfirmationPage> {
                                             fontSize: 16,
                                             fontWeight: FontWeight.w600)),
                                     const SizedBox(height: 6),
-                                    const Text("Scan in stable, well lit area",
+                                    Text("Scan in stable, well lit area",
                                         style: TextStyle(
-                                            color: Colors.black54, fontSize: 13)),
+                                            color: AppColors.subText, fontSize: 13)),
                                     const SizedBox(height: 12),
                                     Text(
                                       _verified
                                           ? "Tap to clear scan"
                                           : "Tap to simulate scan",
-                                      style: const TextStyle(
-                                        color: Colors.black45,
+                                      style: TextStyle(
+                                        color: AppColors.subText,//Colors.black45,
                                         fontSize: 12,
                                       ),
                                     ),
@@ -266,7 +270,9 @@ class _PickupConfirmationPageState extends State<PickupConfirmationPage> {
                             SizedBox(
                               width: double.infinity,
                               child: ElevatedButton(
-                                onPressed: _verified ? () {/* perform pickup action */} : null,
+                                onPressed: _verified ? () {
+                                  performPickupAction(delivery.delivery_id!);
+                                } : null,
                                 style: ElevatedButton.styleFrom(
                                   padding: const EdgeInsets.symmetric(vertical: 16),
                                   shape: RoundedRectangleBorder(
@@ -290,5 +296,9 @@ class _PickupConfirmationPageState extends State<PickupConfirmationPage> {
         );
       }
     );
+  }
+
+  void performPickupAction(String deliveryId) {
+    VerificationService().verifyPickup(deliveryId);
   }
 }

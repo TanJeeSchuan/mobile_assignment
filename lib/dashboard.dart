@@ -1,13 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile_assignment/AppColors.dart';
-import 'package:mobile_assignment/profile.dart';
 import 'package:mobile_assignment/service/DeliveryService.dart';
+import 'package:shimmer/shimmer.dart';
 
 import 'Defines.dart';
-import 'GeneralWidgets.dart';
 import 'DeliveryCard.dart';
-import 'DeliveryDetail.dart';
 import 'models/DeliverySummary.dart';
 
 class Dashboard extends StatelessWidget {
@@ -18,7 +18,7 @@ class Dashboard extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Greenstem Delivery"),
-        backgroundColor: Color(0xFF03A9F4),
+        backgroundColor: AppColors.accentColor,
         actions: <Widget>[
           Builder(
             builder: (context) {
@@ -49,10 +49,20 @@ class DeliveryList extends StatefulWidget {
   @override
   State<DeliveryList> createState() => _DeliveryListState();
 }
-
 class _DeliveryListState extends State<DeliveryList> with AutomaticKeepAliveClientMixin{
   late Future<List<DeliverySummary>> ordersFuture;
   late DeliveryService service;
+
+  String selectedFilter = "All";
+
+  // Define your options with icon + label
+  final List<Map<String, dynamic>> filterOptions = [
+    {"label": "All", "icon": Icons.playlist_add_check_outlined},
+    {"label": "Packing", "icon": Icons.inventory_2_outlined},
+    {"label": "Ready To Ship", "icon": Icons.check_circle_outline},
+    {"label": "In Transit", "icon": Icons.local_shipping_outlined},
+    {"label": "Package Arrived", "icon": Icons.home_outlined},
+  ];
 
   @override
   bool get wantKeepAlive => true;
@@ -66,31 +76,110 @@ class _DeliveryListState extends State<DeliveryList> with AutomaticKeepAliveClie
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return FutureBuilder<List<DeliverySummary>>(
       future: ordersFuture,
       builder: (context, snapshot){
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: 3, // show 3 placeholders
+            itemBuilder: (context, index) {
+              return const DeliveryCardShimmer();
+            },
+          );
         } else if (snapshot.hasError) {
           return Center(child: Text("Error: ${snapshot.error}"));
         } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
           return const Center(child: Text("No deliveries found"));
         }
 
-        final deliveries = snapshot.data!;
+        final deliveries = _applyFilter(snapshot.data!);
 
-        return ListView.builder(
-          shrinkWrap: true,
-          physics: NeverScrollableScrollPhysics(), // disable ListView scrolling
-          itemCount: deliveries.length,
-          itemBuilder: (context, index) {
-            return DeliveryCard(delivery: deliveries[index]);
-          },
+        return Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey.shade300),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: selectedFilter,
+                  isExpanded: true,
+                  icon: const Icon(Icons.filter_list, color: Colors.blue),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.black,
+                  ),
+                  items: filterOptions.map((option) {
+                    return DropdownMenuItem<String>(
+                      value: option["label"],
+                      child: Row(
+                        children: [
+                          Icon(option["icon"], size: 20, color: Colors.grey.shade600),
+                          const SizedBox(width: 10),
+                          Text(option["label"]),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() {
+                        selectedFilter = value;
+                      });
+                    }
+                  },
+                ),
+              ),
+            ),
+            ListView.builder(
+              shrinkWrap: true,
+              physics: NeverScrollableScrollPhysics(), // disable ListView scrolling
+              itemCount: deliveries.length,
+              itemBuilder: (context, index) {
+                return DeliveryCard(delivery: deliveries[index]);
+              },
+            ),
+          ],
         );
       },
     );
   }
+
+  _applyFilter(List<DeliverySummary> list) {
+    if (selectedFilter == "All") return list;
+
+    return list.where((d) {
+      switch (selectedFilter) {
+        case "Packing":
+          return d.status == "Packing";
+        case "Ready To Ship":
+          return d.status == "Ready To Ship";
+        case "In Transit":
+          return d.status == "In Transit";
+        case "Package Arrived":
+          return d.status == "Package Arrived";
+        default:
+          return false; // fallback
+      }
+    }).toList();
+  }
 }
+
 
 class OrderStatus extends StatefulWidget{
   const OrderStatus({
@@ -100,17 +189,35 @@ class OrderStatus extends StatefulWidget{
   @override
   State<OrderStatus> createState() => _OrderStatusState();
 }
-
 class _OrderStatusState extends State<OrderStatus> {
   late DeliveryService service;
   late Future<Map<String, dynamic>> future;
+  Timer? timer;
 
   @override initState(){
     super.initState();
     service = DeliveryService();
-    future = () async {
-      return service.fetchDeliveryTypeCount();
-    }();
+    _refreshFuture(); // initial load
+    // future = () async {
+    //   return service.fetchDeliveryTypeCount();
+    // }();
+
+    // refresh every 10 seconds (adjust as needed)
+    timer = Timer.periodic(Duration(seconds: 150), (_) {
+      _refreshFuture();
+    });
+  }
+
+  @override
+  void dispose() {
+    timer?.cancel();
+    super.dispose();
+  }
+
+  void _refreshFuture() {
+    setState(() {
+      future = service.fetchDeliveryTypeCount();
+    });
   }
 
   @override
@@ -120,7 +227,37 @@ class _OrderStatusState extends State<OrderStatus> {
       builder: (context, asyncSnapshot) {
 
         if(asyncSnapshot.connectionState == ConnectionState.waiting){
-          return const Center(child: CircularProgressIndicator());
+          return Container(
+            margin: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppColors.borderColour, width: 1),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.shadowColor,
+                  spreadRadius: 1,
+                  blurRadius: 4,
+                  offset: const Offset(0, 12),
+                ),
+              ],
+            ),
+            child: Shimmer.fromColors(
+              baseColor: Colors.grey.shade300,
+              highlightColor: Colors.grey.shade100,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(height: 24, width: 120, color: Colors.grey), // Title
+                  const SizedBox(height: 20),
+                  for (int i = 0; i < 4; i++) ...[
+                    Container(height: 40, margin: const EdgeInsets.symmetric(vertical: 6), color: Colors.grey),
+                  ]
+                ],
+              ),
+            ),
+          );
         } else if(asyncSnapshot.hasError){
           return Center(child: Text("Error: ${asyncSnapshot.error}"));
         } else if(!asyncSnapshot.hasData || asyncSnapshot.data!.isEmpty){
@@ -128,31 +265,39 @@ class _OrderStatusState extends State<OrderStatus> {
         }
 
         Map<String, dynamic> deliveryReport = asyncSnapshot.data!;
-// Convert list of maps into a lookup by status
-        List<dynamic> summaryList = deliveryReport['statusSummary'];
-        Map<String, int> statusMap = {
-          for (var item in summaryList) item['status']: item['count']
-        };
-// Now you can safely access by status name
-        int packingCount    = statusMap['package_pickup'] ?? 0;
-        int readyCount   = statusMap['packing_finished'] ?? 0;
-        int transitCount  = statusMap['order_complete'] ?? 0;
-        int arrivedCount = statusMap['order_confirmed'] ?? 0;
+        Map<String, dynamic> statusSummary = deliveryReport['statusSummary'] ?? {};
+        // Access counts directly
+        int packingCount = statusSummary['packing'] ?? 0;
+        int readyCount   = statusSummary['ready'] ?? 0;
+        int transitCount = statusSummary['transit'] ?? 0;
+        int arrivedCount = statusSummary['arrived'] ?? 0;
+
+//         Map<String, dynamic> deliveryReport = asyncSnapshot.data!;
+// // Convert list of maps into a lookup by status
+//         List<dynamic> summaryList = deliveryReport['statusSummary'];
+//         Map<String, int> statusMap = {
+//           for (var item in summaryList) item['status']: item['count']
+//         };
+// // Now you can safely access by status name
+//         int packingCount  = statusMap['package_pickup'] ?? 0;
+//         int readyCount    = statusMap['packing_finished'] ?? 0;
+//         int transitCount  = statusMap['order_complete'] ?? 0;
+//         int arrivedCount  = statusMap['order_confirmed'] ?? 0;
 
 
         return Container(
           margin: const EdgeInsets.symmetric(horizontal: 22,vertical: 16),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.backgroundColor,
             borderRadius: BorderRadius.circular(8), // rounded corners
             border: Border.all(
-              color: Colors.grey.shade300, // thin border
+              color: AppColors.borderColour, // thin border
               width: 1,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.08),
+                color: AppColors.shadowColor,
                 spreadRadius: 1,
                 blurRadius: 4,
                 offset: const Offset(0, 12), // shadow direction
@@ -191,10 +336,9 @@ class _OrderStatusState extends State<OrderStatus> {
 
 class DashboardStatusBar extends StatefulWidget{
   final StatusBarOrderType type;
+  final int value;
 
-  int value;
-
-  DashboardStatusBar({
+  const DashboardStatusBar({
     super.key,
     required this.type, required this.value,
   });
@@ -202,7 +346,6 @@ class DashboardStatusBar extends StatefulWidget{
   @override
   State<DashboardStatusBar> createState() => _DashboardStatusBarState();
 }
-
 class _DashboardStatusBarState extends State<DashboardStatusBar> {
   String orderString = OrderStrings.awaiting;
   Color squareColor = AppColors.defaultColor;

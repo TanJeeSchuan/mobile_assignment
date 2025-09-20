@@ -5,6 +5,31 @@ import 'Workshop.dart';
 import 'Warehouse.dart';
 import 'Part.dart';
 
+enum StageType {
+  orderConfirmed,
+  packingFinished,
+  packagePickup,
+  packageDropoff,
+  orderComplete,
+}
+
+extension StageTypeExtension on StageType {
+  String get value {
+    switch (this) {
+      case StageType.orderConfirmed:
+        return "order_confirmed";
+      case StageType.packingFinished:
+        return "packing_finished";
+      case StageType.packagePickup:
+        return "package_pickup";
+      case StageType.packageDropoff:
+        return "package_dropoff";
+      case StageType.orderComplete:
+        return "order_complete";
+    }
+  }
+}
+
 class Delivery {
   final List<Attachment> attachments;
   final DateTime deliverBy;
@@ -116,6 +141,26 @@ class Delivery {
 
   String getCurrentStage() {
     return getLastCompleteStage(stages) ?? 'Unknown';
+  }
+
+  String getNextVerificationStage() {
+    String currentStage = getCurrentStage();
+    if (currentStage == 'order_confirmed') {
+      return "unauthorized";
+    } else if (currentStage == 'packing_finished') {
+      return "pickup";
+    } else if (currentStage == 'package_pickup') {
+      return "dropoff";
+    } else {
+      return "unauthorized";
+    }
+  }
+
+  bool isPickupCompleted() {
+    if (getCurrentStage() == StageType.packagePickup.value || getCurrentStage() == StageType.orderConfirmed.value || getCurrentStage() == StageType.packingFinished.value) {
+      return false;
+    }
+    return true;
   }
 }
 
