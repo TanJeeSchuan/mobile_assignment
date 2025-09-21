@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mobile_assignment/service/DeliveryService.dart';
 import 'package:mobile_assignment/service/VerificationService.dart';
 
@@ -356,6 +357,11 @@ class _PickupConfirmationPageState extends State<PickupConfirmationPage> {
           backgroundColor: Colors.green,
         ),
       );
+
+      if(mounted) {
+        context.go("/home");
+      }
+
     } catch (e) {
       setState(() {
         _isVerifying = false;

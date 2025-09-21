@@ -12,6 +12,7 @@ import 'models/DeliverySummary.dart';
 
 class Dashboard extends StatelessWidget {
   final GlobalKey<_DeliveryListState> deliveryListKey = GlobalKey<_DeliveryListState>();
+  final GlobalKey<_OrderStatusState> orderStatusKey = GlobalKey<_OrderStatusState>();
 
   Dashboard({super.key});
 
@@ -37,15 +38,15 @@ class Dashboard extends StatelessWidget {
       ),
       body: CustomScrollView(
         slivers: [
-          SliverToBoxAdapter(child: OrderStatus()),
+          SliverToBoxAdapter(child: OrderStatus (key: orderStatusKey)),
           SliverToBoxAdapter(child: DeliveryList(key: deliveryListKey)),
           //SliverToBoxAdapter(child: DeliveryList()), // <-- no nested scroll
         ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          // Find the DeliveryList state and trigger refresh
-          //DeliveryList.refreshDeliveries(context);
+          // Refresh both
+          orderStatusKey.currentState?.refresh();
           deliveryListKey.currentState?.refresh();
         },
         child: const Icon(Icons.refresh),
@@ -262,6 +263,10 @@ class _OrderStatusState extends State<OrderStatus> {
     setState(() {
       future = service.fetchDeliveryTypeCount();
     });
+  }
+
+  void refresh(){
+    _refreshFuture();
   }
 
   @override
