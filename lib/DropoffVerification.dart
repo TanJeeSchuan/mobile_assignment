@@ -225,15 +225,15 @@ class _DropoffVerificationState extends State<DropoffVerification> {
       proofUrls.add(signatureUrl);
 
       // Verify delivery
-      // await VerificationService().verifyDelivery(
-      //     deliveryId,
-      //     stageName,
-      //     proofUrls,
-      //     currentUser.staffId,
-      //     currentUser.staffName,
-      //     employeeId,
-      //     recipientName
-      // );
+      await VerificationService().verifyDelivery(
+          deliveryId,
+          stageName,
+          proofUrls,
+          currentUser.staffId,
+          currentUser.staffName,
+          employeeId,
+          recipientName
+      );
 
       //await _showSuccessAnimation();
       ScaffoldMessenger.of(context).showSnackBar(
