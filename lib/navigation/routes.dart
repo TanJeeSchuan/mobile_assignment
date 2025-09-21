@@ -3,8 +3,9 @@ import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../DeliveryDetail.dart';
+import '../DeliveryVerificationSummary.dart';
 import '../DropoffVerification.dart';
-import '../dashboard.dart';
+import '../Dashboard.dart';
 import '../login.dart';
 import '../PickupVerification.dart';
 import '../profile.dart';
@@ -32,7 +33,7 @@ final GoRouter router = GoRouter(
     ),
     GoRoute(
       path: '/home',
-      builder: (context, state) => const Dashboard(),
+      builder: (context, state) => Dashboard(),
       routes: [
         GoRoute(
           path: 'profile', // /home/profile
@@ -51,13 +52,31 @@ final GoRouter router = GoRouter(
                 final deliveryId = state.pathParameters['deliveryId']!;
                 return PickupConfirmationPage(deliveryId: deliveryId,);
               },
+              routes: [
+                GoRoute(
+                    path: 'verified',
+                    builder: (context, state){
+                      final deliveryId = state.pathParameters['deliveryId']!;
+                      return VerificationSummary(deliveryId: deliveryId, showingPickup: true);
+                    }
+                )
+              ]
             ),
             GoRoute(
               path: 'dropoffVerification', // /home/deliveryDetail/verification
               builder: (context, state) {
                 final deliveryId = state.pathParameters['deliveryId']!;
-                return DropoffVerification(deliveryId: deliveryId,);
+                return DropoffVerification(deliveryId: deliveryId, );
               },
+              routes: [
+                GoRoute(
+                  path: 'verified',
+                  builder: (context, state){
+                    final deliveryId = state.pathParameters['deliveryId']!;
+                    return VerificationSummary(deliveryId: deliveryId, showingPickup: false,);
+                  }
+                )
+              ]
             ),
           ],
         ),

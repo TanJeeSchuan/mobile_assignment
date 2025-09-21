@@ -7,9 +7,7 @@ import 'AppColors.dart';
 import 'Defines.dart';
 import 'GeneralWidgets.dart';
 import 'DeliveryCard.dart';
-import 'DropoffVerification.dart';
 import 'models/Delivery.dart';
-import 'models/Part.dart';
 
 class OrderStage {
   final String stage;
@@ -23,13 +21,13 @@ class OrderStage {
   });
 }
 
-final List<OrderStage> orderStages = [
-  OrderStage(stage: "Order Confirmed", status: "Completed", time: "5 Jun, 6.00 p.m."),
-  OrderStage(stage: "Packing Finished", status: "Completed", time: "6 Jun, 9.45 p.m."),
-  OrderStage(stage: "Package Pickup", status: "Current", time: "6 Jun, 11.40 p.m."),
-  OrderStage(stage: "Package Dropoff", status: "Pending", time: "-"),
-  OrderStage(stage: "Order Complete", status: "Pending", time: "-"),
-];
+// final List<OrderStage> orderStages = [
+//   OrderStage(stage: "Order Confirmed", status: "Completed", time: "5 Jun, 6.00 p.m."),
+//   OrderStage(stage: "Packing Finished", status: "Completed", time: "6 Jun, 9.45 p.m."),
+//   OrderStage(stage: "Package Pickup", status: "Current", time: "6 Jun, 11.40 p.m."),
+//   OrderStage(stage: "Package Dropoff", status: "Pending", time: "-"),
+//   OrderStage(stage: "Order Complete", status: "Pending", time: "-"),
+// ];
 
 
 class OrderDetail extends StatefulWidget{
@@ -72,6 +70,8 @@ class _OrderDetailState extends State<OrderDetail> {
 
   @override
   Widget build(BuildContext context) {
+    print("Current route: ${GoRouter.of(context).routeInformationProvider.value.uri}");
+
     return FutureBuilder(
         future: _deliveryFuture,
         builder: (context, asyncSnapshot) {
@@ -89,6 +89,10 @@ class _OrderDetailState extends State<OrderDetail> {
           }
 
           if (asyncSnapshot.hasError) {
+            // final rawData = asyncSnapshot.data;
+            // print("DEBUG rawData runtimeType: ${rawData.runtimeType}");
+            // print("DEBUG rawData value: $rawData");
+            // throw asyncSnapshot.error!;
             return Center(
                 child: Text('Error: ${asyncSnapshot.error}'),
             );
@@ -105,7 +109,7 @@ class _OrderDetailState extends State<OrderDetail> {
             appBar: DetailedAppBar(
                 appBarIcon: Icons.account_box,
                 heading: "Order Details",
-                subheading: "Deliver By ${_formatDate(delivery.deliverBy)}"
+                subheading: "Deliver By ${delivery.deliverBy}"
             ),
             body: SingleChildScrollView(
               child:Container(
@@ -137,6 +141,8 @@ class _OrderDetailState extends State<OrderDetail> {
                     PackageDetails(delivery: delivery),
                     SizedBox(height: 16),
                     AttachmentsFrame(delivery: delivery),
+                    SizedBox(height: 16),
+                    VerificationDetails(delivery: delivery),
                     // SizedBox(height: 16),
                     // ContactsFrame(),
                     SizedBox(height: 26),
@@ -163,6 +169,62 @@ _formatDate(DateTime deliverBy) {
   return formatted;
 }
 
+class VerificationDetails extends StatelessWidget{
+  final Delivery delivery;
+
+  const VerificationDetails(
+      {
+        super.key,
+        required this.delivery
+      });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      child: Column(
+        children: [
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              "Verification",
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
+            ),
+          ),
+          Container(
+            child: Column(
+              children: [
+                Column(
+                  children: [
+                    VerificationStatusRow(label: "Pickup Verified",
+                      verified: delivery.isPickupVerified(),
+                      onDetails: () {
+                        context.push(
+                          '/home/deliveryDetail/${delivery.deliveryId}/pickupVerification/verified',
+                        );
+                      }
+                    ),
+                    VerificationStatusRow(label: "Dropoff Verified",
+                        verified: delivery.isDropoffVerified(),
+                        onDetails: () {
+                          context.push(
+                            '/home/deliveryDetail/${delivery.deliveryId}/dropoffVerification/verified',
+                          );
+                        }
+                    ),
+                  ],
+                )
+              ],
+            ),
+          )
+        ],
+      ),
+    );
+  }
+}
+
 class StepConfirmedButton extends StatelessWidget{
   final Delivery delivery;
 
@@ -174,15 +236,9 @@ class StepConfirmedButton extends StatelessWidget{
       width: 250,
       height: 48,
       child: ElevatedButton(
-          onPressed: (){
-            context.push('/home/deliveryDetail/${delivery.delivery_id}/dropoffVerification');
-            // Navigator.push(
-            //   context,
-            //   MaterialPageRoute<void>(
-            //     builder: (context) => const DropoffVerification(),
-            //   ),
-            // );
-          },
+          onPressed: delivery.getCurrentStageName() == "ready" ||  delivery.getCurrentStageName() == "transit" ? (){
+            navigateToVerification(delivery, context);
+          } : null,
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.stepActive, // button background color
             foregroundColor: Colors.white, // text/icon color
@@ -193,6 +249,20 @@ class StepConfirmedButton extends StatelessWidget{
           child: Text("Step Confirmed"),
       ),
     );
+  }
+}
+
+navigateToVerification(Delivery delivery, BuildContext context){
+  var dS = delivery.toOrderSummary();
+  if(dS.status == "Ready To Ship"){
+    //print("Current route: ${GoRouter.of(context).routeInformationProvider.value.uri}");
+
+    context.push('/home/deliveryDetail/${dS.orderId}/pickupVerification');
+
+  } else {
+    //print("Current route: ${GoRouter.of(context).routeInformationProvider.value.uri}");
+
+    context.push('/home/deliveryDetail/${dS.orderId}/dropoffVerification');
   }
 }
 
@@ -307,7 +377,7 @@ class ContactsFrame extends StatelessWidget {
 }
 
 class AttachmentsFrame extends StatelessWidget{
-  List<Attachment> attachments;
+  List<DeliveryAttachment> attachments;
 
   AttachmentsFrame({super.key, required Delivery delivery}): attachments = delivery.attachments;
 
@@ -327,15 +397,32 @@ class AttachmentsFrame extends StatelessWidget{
         ),
         SizedBox(
           height: 150,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: attachments.length,
-            itemBuilder: (context, index) {
-              return Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: WebImage(url: attachments[index].downloadUrl),
-              );
-            },
+          child:
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: List.generate(
+                    attachments.length,
+                    (index) => Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: ImageWithPreviewUrl(
+                        imageUrl: attachments[index].downloadUrl,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+          // ListView.builder(
+          //   scrollDirection: Axis.horizontal,
+          //   itemCount: attachments.length,
+          //   itemBuilder: (context, index) {
+          //     return Padding(
+          //       padding: const EdgeInsets.all(8.0),
+          //       child: WebImage(url: attachments[index].downloadUrl),
+          //     );
+          //   },
             // mainAxisAlignment: MainAxisAlignment.spaceBetween,
             // image icon
             // children: [
@@ -358,7 +445,6 @@ class AttachmentsFrame extends StatelessWidget{
             //     fit: BoxFit.contain, // or cover, fill, etc.
             //   )
             // ]
-          ),
         ),
       ],
     );
@@ -566,21 +652,23 @@ class DetailedAppBar extends StatelessWidget implements PreferredSizeWidget{
           SizedBox(
             width: 18,
           ),
-          Column(
-            mainAxisAlignment: MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.start, // left-align text
-            children: [
-              Text(
-                heading,
-                textAlign: TextAlign.left,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              Text(
-                subheading,
-                textAlign: TextAlign.left,
-                style: const TextStyle(fontWeight: FontWeight.normal),
-              )
-            ],
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start, // left-align text
+              children: [
+                Text(
+                  heading,
+                  textAlign: TextAlign.left,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  subheading,
+                  textAlign: TextAlign.left,
+                  style: const TextStyle(fontWeight: FontWeight.normal),
+                )
+              ],
+            ),
           )
         ],
       ),
@@ -800,3 +888,98 @@ class ScheduleTable extends StatelessWidget {
     );
   }
 }
+
+class VerificationStatusRow extends StatelessWidget {
+  final String label;
+  final bool verified;
+  final VoidCallback? onDetails; // optional callback
+
+  const VerificationStatusRow({
+    super.key,
+    required this.label,
+    required this.verified,
+    this.onDetails,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final statusText = verified ? "YES" : "PENDING";
+    final statusColor = verified ? Colors.green : Colors.orange;
+    final statusIcon = verified ? Icons.check_circle : Icons.hourglass_empty;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade300, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // Left side label
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+
+          // Right side: status + optional details
+          Row(
+            children: [
+              // Status pill
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  children: [
+                    Icon(statusIcon, size: 18, color: statusColor),
+                    const SizedBox(width: 6),
+                    Text(
+                      statusText,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: statusColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Show "Details" button only if verified
+              if (verified) ...[
+                const SizedBox(width: 10),
+                TextButton(
+                  onPressed: onDetails,
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.blue,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                  ),
+                  child: const Text(
+                    "Details",
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ]
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+

@@ -6,9 +6,6 @@ import 'package:shimmer/shimmer.dart';
 import 'AppColors.dart';
 import 'Defines.dart';
 import 'GeneralWidgets.dart';
-import 'DeliveryDetail.dart';
-import 'DropoffVerification.dart';
-import 'PickupVerification.dart';
 import 'navigation/DeliveryNavigation.dart';
 
 class DeliveryCard extends StatelessWidget{
@@ -50,6 +47,7 @@ class DeliveryCard extends StatelessWidget{
                 Expanded(
                     child: ElevatedButton (
                       onPressed: () {
+                        print("Current route: ${GoRouter.of(context).routeInformationProvider.value.uri}");
                         context.push('/home/deliveryDetail/${delivery.orderId}');
                       },
                       style: ElevatedButton.styleFrom(
@@ -163,8 +161,13 @@ class DeliveryCardShimmer extends StatelessWidget {
 
 navigateToVerification(DeliverySummary delivery, BuildContext context){
   if(delivery.status == "Ready To Ship"){
+    //print("Current route: ${GoRouter.of(context).routeInformationProvider.value.uri}");
+
     context.push('/home/deliveryDetail/${delivery.orderId}/pickupVerification');
+
   } else {
+    //print("Current route: ${GoRouter.of(context).routeInformationProvider.value.uri}");
+
     context.push('/home/deliveryDetail/${delivery.orderId}/dropoffVerification');
   }
 }

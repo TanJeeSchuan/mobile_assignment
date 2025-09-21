@@ -22,7 +22,8 @@ class AuthService {
     if (response.statusCode == 200) {
       return UserData.fromJson(jsonDecode(response.body));
     } else {
-      print('Error: ${response.statusCode} - ${response.body}');
+      throw Exception(response.statusCode.toString() + response.body);
+      //print('Error: ${response.statusCode} - ${response.body}');
     }
 
     return null;

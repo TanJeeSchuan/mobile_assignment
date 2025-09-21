@@ -11,7 +11,9 @@ import 'DeliveryCard.dart';
 import 'models/DeliverySummary.dart';
 
 class Dashboard extends StatelessWidget {
-  const Dashboard({super.key});
+  final GlobalKey<_DeliveryListState> deliveryListKey = GlobalKey<_DeliveryListState>();
+
+  Dashboard({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -36,9 +38,18 @@ class Dashboard extends StatelessWidget {
       body: CustomScrollView(
         slivers: [
           SliverToBoxAdapter(child: OrderStatus()),
-          SliverToBoxAdapter(child: DeliveryList()), // <-- no nested scroll
+          SliverToBoxAdapter(child: DeliveryList(key: deliveryListKey)),
+          //SliverToBoxAdapter(child: DeliveryList()), // <-- no nested scroll
         ],
-      )
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          // Find the DeliveryList state and trigger refresh
+          //DeliveryList.refreshDeliveries(context);
+          deliveryListKey.currentState?.refresh();
+        },
+        child: const Icon(Icons.refresh),
+      ),
     );
   }
 }
@@ -46,14 +57,45 @@ class Dashboard extends StatelessWidget {
 class DeliveryList extends StatefulWidget {
   const DeliveryList({super.key});
 
+  // static helper so Dashboard can trigger refresh
+  static void refreshDeliveries(BuildContext context) {
+    final state = context.findAncestorStateOfType<_DeliveryListState>();
+    state?._refreshFuture();
+  }
+
   @override
   State<DeliveryList> createState() => _DeliveryListState();
 }
 class _DeliveryListState extends State<DeliveryList> with AutomaticKeepAliveClientMixin{
+
   late Future<List<DeliverySummary>> ordersFuture;
   late DeliveryService service;
 
   String selectedFilter = "All";
+
+  // previously private; make public and return Future so callers can await
+  Future<void> refresh() async {
+    if (!mounted) return;
+    // debug print so you can see it was triggered
+    debugPrint('[DeliveryList] refresh() called');
+    setState(() {
+      // assign a *new* future so FutureBuilder notices change
+      ordersFuture = service.fetchDeliveries();
+    });
+    try {
+      await ordersFuture; // await so caller can wait until complete
+      debugPrint('[DeliveryList] refresh finished');
+    } catch (e) {
+      debugPrint('[DeliveryList] refresh error: $e');
+      // FutureBuilder will display the error; we swallow here to avoid unhandled exceptions
+    }
+  }
+
+  void _refreshFuture() {
+    setState(() {
+      ordersFuture = service.fetchDeliveries();
+    });
+  }
 
   // Define your options with icon + label
   final List<Map<String, dynamic>> filterOptions = [
@@ -71,8 +113,9 @@ class _DeliveryListState extends State<DeliveryList> with AutomaticKeepAliveClie
   void initState() {
     super.initState();
     service = DeliveryService();
-    ordersFuture = service.fetchDeliveries(); // simpler, no async lambda needed
+    ordersFuture = service.fetchDeliveries(); // only once
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -164,6 +207,7 @@ class _DeliveryListState extends State<DeliveryList> with AutomaticKeepAliveClie
     if (selectedFilter == "All") return list;
 
     return list.where((d) {
+      //print("ID: ${d.orderId}, status: ${d.status}\n");
       switch (selectedFilter) {
         case "Packing":
           return d.status == "Packing";
@@ -172,7 +216,7 @@ class _DeliveryListState extends State<DeliveryList> with AutomaticKeepAliveClie
         case "In Transit":
           return d.status == "In Transit";
         case "Package Arrived":
-          return d.status == "Package Arrived";
+          return d.status == "Completed" || d.status == "Package Arrived";
         default:
           return false; // fallback
       }

@@ -32,7 +32,22 @@ class VerificationService {
     }
   }
 
-  void verifyPickup(String deliveryId) {
-    throw Exception("Not implemented");
+  Future<void> verifyPickup(
+      String deliveryId,
+      String qrString,
+      String uploaderId,
+      String uploaderName,) async {
+
+    final response = await http.post(Uri.parse("$baseUrl/verify_pickup?"
+        "deliveryId=$deliveryId"
+        "&uploadedById=$uploaderId"
+        "&uploadedByName=$uploaderName"
+        "&qrString=$qrString"));
+
+    if (response.statusCode == 200) {
+      print("Pickup verified successfully");
+    } else {
+      print("Failed to verify pickup" + response.body);
+    }
   }
 }

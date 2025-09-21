@@ -28,6 +28,14 @@ class DeliveryService {
     final response = await http.get(Uri.parse("$baseUrl/get_delivery_detailed_by_id?deliveryId=$deliveryId"));
 
     // print(deliveryId);
+    // final decoded = jsonDecode(response.body);
+    // print("=== RAW RESPONSE BODY ===");
+    // print(response.body);
+    //
+    // print("=== DECODED JSON (with types) ===");
+    // decoded.forEach((key, value) {
+    //   print("$key (${value.runtimeType}): $value");
+    // });
 
     if (response.statusCode == 200) {
       final Map<String, dynamic> decoded = jsonDecode(response.body);

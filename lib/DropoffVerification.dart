@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mobile_assignment/models/Delivery.dart';
 import 'package:mobile_assignment/service/AuthService.dart';
 import 'package:mobile_assignment/service/DeliveryService.dart';
@@ -9,10 +10,11 @@ import 'package:signature/signature.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 
+import 'GeneralWidgets.dart';
 import 'signature_input.dart';
 
 class DropoffVerification extends StatefulWidget {
-  final String deliveryId; // <-- store the deliveryId
+  final String deliveryId;
   DropoffVerification({super.key, required this.deliveryId});
 
   @override
@@ -20,11 +22,11 @@ class DropoffVerification extends StatefulWidget {
 }
 
 class _DropoffVerificationState extends State<DropoffVerification> {
-  final _formKey = GlobalKey<FormState>();
+  bool _isSubmitting = false;
 
+  final _formKey = GlobalKey<FormState>();
   final TextEditingController _recipientNameController = TextEditingController();
   final TextEditingController _employeeIdController = TextEditingController();
-
 
   final SignatureController _signatureController = SignatureController(
     penStrokeWidth: 3,
@@ -38,21 +40,39 @@ class _DropoffVerificationState extends State<DropoffVerification> {
   final List<File> _proofFiles = [];
 
   late DeliveryService _deliveryService;
-  late Future<Delivery?> _deliveryFuture; // cached future
+  late Future<Delivery?> _deliveryFuture;
 
-  Future<Delivery?> fetchDelivery(deliveryId) async {
-    return await _deliveryService.fetchDeliveryDetail(deliveryId);
-  }
-
-  @override initState(){
+  @override
+  void initState() {
     super.initState();
     _deliveryService = DeliveryService();
     _deliveryFuture = fetchDelivery(widget.deliveryId);
-    // service.fetchDeliveryDetail(widget.deliveryId);
+
+    _recipientNameController.addListener(() => setState(() {}));
+    _employeeIdController.addListener(() => setState(() {}));
   }
 
-  /// Start editing
-  /// Navigate to signature input page
+  Future<Delivery?> fetchDelivery(String deliveryId) async {
+    return await _deliveryService.fetchDeliveryDetail(deliveryId);
+  }
+
+  bool get _canSubmit {
+    return _recipientNameController.text.isNotEmpty &&
+        _employeeIdController.text.isNotEmpty &&
+        _savedSignature != null &&
+        _proofFiles.isNotEmpty &&
+        !_isSubmitting;
+  }
+
+  @override
+  void dispose() {
+    _signatureController.dispose();
+    _recipientNameController.dispose();
+    _employeeIdController.dispose();
+    super.dispose();
+  }
+
+  /// Signature methods
   Future<void> _startEditing() async {
     final result = await Navigator.push(
       context,
@@ -61,12 +81,11 @@ class _DropoffVerificationState extends State<DropoffVerification> {
 
     if (result != null && result is Uint8List) {
       setState(() {
-        _savedSignature = result; // update with new signature
+        _savedSignature = result;
       });
     }
   }
 
-  /// Cancel → restore old state
   void _cancelEditing() {
     setState(() {
       _isEditing = false;
@@ -75,28 +94,25 @@ class _DropoffVerificationState extends State<DropoffVerification> {
     });
   }
 
-  /// Save signature
   Future<void> _saveSignature() async {
     final signature = await _signatureController.toPngBytes();
     setState(() {
       _isEditing = false;
-      _savedSignature = signature; // can be null = blank
+      _savedSignature = signature;
     });
   }
 
-  /// Redo inside pad
   void _redoSignature() {
     _signatureController.clear();
   }
 
-  /// Clear after saved
   void _clearSignature() {
     setState(() {
       _savedSignature = null;
     });
   }
 
-  /// Pick proof of delivery (photo/video)
+  /// Pick proof files
   Future<void> _pickProof() async {
     final ImagePicker picker = ImagePicker();
     final XFile? file = await picker.pickImage(source: ImageSource.gallery);
@@ -108,12 +124,137 @@ class _DropoffVerificationState extends State<DropoffVerification> {
     }
   }
 
-  @override
-  void dispose() {
-    _signatureController.dispose();
-    _recipientNameController.dispose();
-    _employeeIdController.dispose();
-    super.dispose();
+  /// Success animation
+  Future<void> _showSuccessAnimation() async {
+    return showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) {
+        Future.delayed(const Duration(seconds: 2), () {
+          if (Navigator.of(context).canPop()) Navigator.of(context).pop();
+        });
+
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: SizedBox(
+            width: 150,
+            height: 150,
+            child: Center(
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0, end: 1),
+                duration: const Duration(milliseconds: 800),
+                builder: (context, value, child) {
+                  return Transform.scale(
+                    scale: value,
+                    child: child,
+                  );
+                },
+                child: Container(
+                  decoration: const BoxDecoration(
+                    color: Colors.green,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.check, color: Colors.white, size: 80),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// Submit confirmation
+  Future<void> _submitConfirmation(String deliveryId, String stageName) async {
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    final recipientName = _recipientNameController.text;
+    final employeeId = _employeeIdController.text;
+    final signature = _savedSignature;
+    final proofFiles = _proofFiles;
+
+    if (recipientName.isEmpty ||
+        employeeId.isEmpty ||
+        signature == null ||
+        proofFiles.isEmpty) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text("Missing Information"),
+          content: const Text(
+              "❌ All fields are required. Please fill them in before continuing."),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("OK"),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    final currentUser = await AuthService.getCurrentUser();
+    if (currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("❌ No current user found"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+
+    try {
+      // Upload proof files sequentially
+      List<String> proofUrls = [];
+      for (var file in proofFiles) {
+        String url = await uploadProofFile(deliveryId, currentUser.staffId, file);
+        proofUrls.add(url);
+      }
+
+      print(proofUrls);
+
+      // Upload signature
+      String signatureUrl = await uploadSignatureFile(
+          deliveryId, currentUser.staffId, stageName, signature);
+
+      proofUrls.add(signatureUrl);
+
+      // Verify delivery
+      // await VerificationService().verifyDelivery(
+      //     deliveryId,
+      //     stageName,
+      //     proofUrls,
+      //     currentUser.staffId,
+      //     currentUser.staffName,
+      //     employeeId,
+      //     recipientName
+      // );
+
+      //await _showSuccessAnimation();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Order Completed Successfully")),
+      );
+
+
+
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error: $e")),
+      );
+      return;
+    } finally {
+      setState(() => _isSubmitting = false);
+    }
+
+    // return to dashboard
+    if(mounted) {
+      context.go("/home/deliveryDetail/$deliveryId/dropoffVerification/verified");
+    }
   }
 
   @override
@@ -121,42 +262,22 @@ class _DropoffVerificationState extends State<DropoffVerification> {
     return FutureBuilder(
       future: _deliveryFuture,
       builder: (context, asyncSnapshot) {
-
         if (asyncSnapshot.connectionState == ConnectionState.waiting) {
-          return Scaffold(
-            appBar: AppBar(
-              backgroundColor: Colors.white,
-              elevation: 0,
-              leading: Container(
-                margin: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.blue,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: IconButton(
-                  icon: const Icon(Icons.arrow_back, color: Colors.white),
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                ),
-              ),
-            ),
-            body: Center(
-              child: CircularProgressIndicator(),
-            ),
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
           );
         }
 
         if (asyncSnapshot.hasError) {
-          return Center(
-            child: Text('Error: ${asyncSnapshot.error}'),
+          return Scaffold(
+            body: Center(child: Text('Error: ${asyncSnapshot.error}')),
           );
         }
 
         final delivery = asyncSnapshot.data;
         if (delivery == null) {
-          return Center(
-            child: Text('Delivery not found'),
+          return const Scaffold(
+            body: Center(child: Text('Delivery not found')),
           );
         }
 
@@ -173,9 +294,7 @@ class _DropoffVerificationState extends State<DropoffVerification> {
               ),
               child: IconButton(
                 icon: const Icon(Icons.arrow_back, color: Colors.white),
-                onPressed: () {
-                  Navigator.pop(context);     // TODO use routing
-                },
+                onPressed: () => Navigator.pop(context),
               ),
             ),
             title: Row(
@@ -185,11 +304,11 @@ class _DropoffVerificationState extends State<DropoffVerification> {
                 const SizedBox(width: 6),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children:[
-                    Text("Delivery Confirmation",
+                  children: [
+                    const Text("Delivery Confirmation",
                         style: TextStyle(color: Colors.black, fontSize: 24)),
-                    Text("Order #${"${delivery.delivery_id}".toUpperCase()}", //(Batu Caves → Sentul)",
-                        style: TextStyle(color: Colors.grey, fontSize: 16)),
+                    Text("Order #${delivery.deliveryId?.toUpperCase() ?? ''}",
+                        style: const TextStyle(color: Colors.grey, fontSize: 16)),
                   ],
                 ),
               ],
@@ -202,7 +321,7 @@ class _DropoffVerificationState extends State<DropoffVerification> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Recipient Info
+                  // Recipient Info Card
                   Card(
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),
@@ -211,17 +330,17 @@ class _DropoffVerificationState extends State<DropoffVerification> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            children: const [
+                          const Row(
+                            children: [
                               Icon(Icons.person_outline,
                                   size: 20, color: Colors.black54),
                               SizedBox(width: 6),
                               Text("Recipient Information",
                                   style: TextStyle(
-                                      fontSize: 16, fontWeight: FontWeight.bold)),
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold)),
                             ],
                           ),
-
                           const SizedBox(height: 12),
                           TextFormField(
                             controller: _recipientNameController,
@@ -229,7 +348,7 @@ class _DropoffVerificationState extends State<DropoffVerification> {
                               labelText: "Recipient Name",
                               border: OutlineInputBorder(),
                             ),
-                            validator: (value) {          // TODO Improve validator by connecting to firebase
+                            validator: (value) {
                               if (value == null || value.isEmpty) {
                                 return 'Please enter recipient name';
                               }
@@ -247,12 +366,13 @@ class _DropoffVerificationState extends State<DropoffVerification> {
                               if (value == null || value.isEmpty) {
                                 return 'Please enter employee ID';
                               }
-                            }
+                              return null;
+                            },
                           ),
-
                           const SizedBox(height: 20),
-                          Row(
-                            children: const [
+                          // Signature
+                          const Row(
+                            children: [
                               Icon(Icons.edit_outlined,
                                   size: 20, color: Colors.black54),
                               SizedBox(width: 6),
@@ -261,8 +381,6 @@ class _DropoffVerificationState extends State<DropoffVerification> {
                             ],
                           ),
                           const SizedBox(height: 8),
-
-                          // Signature Box
                           Container(
                             height: 150,
                             decoration: BoxDecoration(
@@ -281,7 +399,6 @@ class _DropoffVerificationState extends State<DropoffVerification> {
                                   Image.memory(_savedSignature!)
                                 else
                                   const Center(child: Text("No signature")),
-
                                 if (_isEditing)
                                   Positioned(
                                     right: 8,
@@ -296,8 +413,6 @@ class _DropoffVerificationState extends State<DropoffVerification> {
                             ),
                           ),
                           const SizedBox(height: 8),
-
-                          // Signature Buttons
                           if (_isEditing) ...[
                             Row(
                               children: [
@@ -367,11 +482,10 @@ class _DropoffVerificationState extends State<DropoffVerification> {
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 20),
-                  // Proof of delivery
-                  Row(
-                    children: const [
+                  // Proof of Delivery
+                  const Row(
+                    children: [
                       Icon(Icons.cloud_upload_outlined,
                           size: 20, color: Colors.black54),
                       SizedBox(width: 6),
@@ -380,8 +494,6 @@ class _DropoffVerificationState extends State<DropoffVerification> {
                     ],
                   ),
                   const SizedBox(height: 8),
-
-                  // Upload box
                   GestureDetector(
                     onTap: _pickProof,
                     child: Container(
@@ -399,67 +511,54 @@ class _DropoffVerificationState extends State<DropoffVerification> {
                             SizedBox(height: 8),
                             Text("Upload Proof Of Delivery"),
                             Text("Photos, Videos, up to 50MB",
-                                style: TextStyle(color: Colors.grey, fontSize: 12)),
+                                style: TextStyle(
+                                    color: Colors.grey, fontSize: 12)),
                           ],
                         ),
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 12),
-                  // Preview selected files
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Row(
                       children: List.generate(
                         _proofFiles.length,
-                            (index) => Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: Container(
-                            width: 60,
-                            height: 60,
-                            decoration: BoxDecoration(
-                              border: Border.all(color: Colors.grey),
-                              borderRadius: BorderRadius.circular(6),
-                              color: Colors.grey[200],
-                              image: DecorationImage(
-                                image: FileImage(_proofFiles[index]),
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          ),
+                            (index) => ImageWithPreview(
+                          imageFile: _proofFiles[index],
+                          showDeleteButton: true,
+                          onDelete: () {
+                            setState(() {
+                              _proofFiles.removeAt(index);
+                            });
+                          },
                         ),
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 20),
                   // Submit button
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
+                        backgroundColor: _canSubmit ? Colors.green : Colors.grey,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8)),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
-                      onPressed: () async {
-                        if (_formKey.currentState!.validate()) {
-                          // ✅ Only runs if all fields are valid
-                          await _submitConfirmation(delivery.delivery_id!.toString(), delivery.getCurrentStage());
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("Order Completed")),
-                          );
-                        } else {
-                          // Show message if form is incomplete
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("Please complete all required fields")),
-                          );
-                        }
-                      },
-                      child: const Text("Order Complete",
-                          style: TextStyle(fontSize: 16, color: Colors.white)),
+                      onPressed: _canSubmit
+                          ? () => _submitConfirmation(
+                        delivery.deliveryId.toString(),
+                        delivery.getCurrentStage()!,
+                      )
+                          : null,
+                      child: _isSubmitting
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : const Text("Order Complete",
+                          style:
+                          TextStyle(fontSize: 16, color: Colors.white)),
                     ),
                   ),
                 ],
@@ -467,55 +566,7 @@ class _DropoffVerificationState extends State<DropoffVerification> {
             ),
           ),
         );
-      }
+      },
     );
-  }
-
-  Future<void> _submitConfirmation(String deliveryId, String stageName) async {
-    String recipientName = _recipientNameController.text;
-    String employeeId = _employeeIdController.text;
-    var signature = _savedSignature;
-    var proofFiles = _proofFiles;
-
-    // stageName = stageName == "package_pickup" ? "pickup" : "dropoff";
-
-    print("deliveryID: " + deliveryId);
-    print("stageName: " + stageName);
-    print("recipientName: " + recipientName);
-    print("employeeId: " + employeeId);
-    print("proofFiles: " + proofFiles.toString());
-
-    // double confirm all fields are valid
-    if (recipientName.isEmpty || employeeId.isEmpty || signature == null || proofFiles.isEmpty) {
-      // alert dialog
-      print("❌ All fields are required");
-      return;
-    }
-
-    // ✅ Get current user from AuthService
-    final currentUser = await AuthService.getCurrentUser();
-    if (currentUser == null) {
-      print("❌ No current user found");
-      return;
-    }
-
-    // ✅ Upload proof files
-    List<String> urls = [];
-    for (var file in proofFiles) {
-      String url = await uploadProofFile(deliveryId, currentUser.staffId, stageName, file);
-
-      urls.add(url);
-    }
-
-    // ✅ Upload signature
-    String signatureUrl = await uploadSignatureFile(deliveryId, currentUser.staffId, stageName, signature);
-    print(signatureUrl);
-
-    VerificationService().verifyDelivery(deliveryId, stageName, urls, currentUser.staffId, currentUser.staffName, employeeId, recipientName);
-
-    // print("Recipient Name: $recipientName");
-    // print("Employee ID: $employeeId");
-    // print("Signature: $signature");
-    // print("Proof Files: $proofFiles");
   }
 }

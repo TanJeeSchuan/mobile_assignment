@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
@@ -141,6 +143,154 @@ class ItemsTable extends StatelessWidget {
             ]);
           }).toList(),
         ],
+      ),
+    );
+  }
+}
+
+class ImageWithPreview extends StatelessWidget {
+  final File imageFile;
+  final double size;
+  final bool enablePopup;
+  final bool showDeleteButton;
+  final VoidCallback? onDelete;
+
+  const ImageWithPreview({
+    super.key,
+    required this.imageFile,
+    this.size = 60,
+    this.enablePopup = true,
+    this.showDeleteButton = false,
+    this.onDelete,
+  });
+
+  /// Show popup view of the image
+  void _showPopup(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(10),
+        child: Stack(
+          children: [
+            GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: InteractiveViewer(
+                panEnabled: true,
+                minScale: 0.5,
+                maxScale: 4,
+                child: Image.file(imageFile, fit: BoxFit.contain),
+              ),
+            ),
+            Positioned(
+              top: 10,
+              right: 10,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: Stack(
+        children: [
+          GestureDetector(
+            onTap: enablePopup ? () => _showPopup(context) : null,
+            child: Container(
+              width: size,
+              height: size,
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey),
+                borderRadius: BorderRadius.circular(6),
+                color: Colors.grey[200],
+                image: DecorationImage(
+                  image: FileImage(imageFile),
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+          ),
+          if (showDeleteButton && onDelete != null)
+            Positioned(
+              top: -5,
+              right: -5,
+              child: GestureDetector(
+                onTap: onDelete,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 1.5),
+                  ),
+                  child: const Icon(Icons.close, size: 18, color: Colors.white),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class ImageWithPreviewUrl extends StatelessWidget {
+  final String imageUrl;
+  final double size;
+  final bool enablePopup;
+
+  const ImageWithPreviewUrl({
+    super.key,
+    required this.imageUrl,
+    this.size = 60,
+    this.enablePopup = true,
+  });
+
+  /// Show popup view of the image
+  void _showPopup(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(10),
+        child: GestureDetector(
+          onTap: () => Navigator.pop(context),
+          child: InteractiveViewer(
+            panEnabled: true,
+            minScale: 0.5,
+            maxScale: 4,
+            child: Image.network(imageUrl, fit: BoxFit.contain),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: GestureDetector(
+        onTap: enablePopup ? () => _showPopup(context) : null,
+        child: Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey),
+            borderRadius: BorderRadius.circular(6),
+            color: Colors.grey[200],
+            image: DecorationImage(
+              image: NetworkImage(imageUrl),
+              fit: BoxFit.cover,
+            ),
+          ),
+        ),
       ),
     );
   }

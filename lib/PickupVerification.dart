@@ -4,6 +4,7 @@ import 'package:mobile_assignment/service/VerificationService.dart';
 
 import 'AppColors.dart';
 import 'GeneralWidgets.dart';
+import 'service/AuthService.dart';
 import 'models/Delivery.dart';
 
 
@@ -37,6 +38,9 @@ class PickupConfirmationPage extends StatefulWidget {
 class _PickupConfirmationPageState extends State<PickupConfirmationPage> {
   bool _verified = false;
   late Future<Delivery?> _deliveryFuture;
+
+  bool _isVerifying = false;
+  String? _errorMessage;
 
   @override initState(){
     super.initState();
@@ -141,7 +145,7 @@ class _PickupConfirmationPageState extends State<PickupConfirmationPage> {
                               style: TextStyle(
                                   fontSize: 20, fontWeight: FontWeight.w700)),
                           const SizedBox(height: 4),
-                          Text("Delivery #${delivery.delivery_id.toString().toUpperCase()}",//123456 (Batu Caves → Sentul)",
+                          Text("Delivery #${delivery.deliveryId.toString().toUpperCase()}",//123456 (Batu Caves → Sentul)",
                               style: TextStyle(fontSize: 14, color: AppColors.subText)),
                         ],
                       ),
@@ -171,7 +175,7 @@ class _PickupConfirmationPageState extends State<PickupConfirmationPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             // Title + divider
-                            Text("Delivery #${delivery.delivery_id.toString().toUpperCase()}",
+                            Text("Delivery #${delivery.deliveryId.toString().toUpperCase()}",
                                 style: TextStyle(
                                     fontSize: 20, fontWeight: FontWeight.w800)),
                             const SizedBox(height: 12),
@@ -270,17 +274,34 @@ class _PickupConfirmationPageState extends State<PickupConfirmationPage> {
                             SizedBox(
                               width: double.infinity,
                               child: ElevatedButton(
-                                onPressed: _verified ? () {
-                                  performPickupAction(delivery.delivery_id!);
-                                } : null,
+                                onPressed: _isVerifying
+                                    ? null
+                                    : () => performPickupAction(delivery.deliveryId!),
                                 style: ElevatedButton.styleFrom(
                                   padding: const EdgeInsets.symmetric(vertical: 16),
                                   shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12)),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  backgroundColor: _isVerifying ? Colors.grey : Colors.blue,
                                   textStyle: const TextStyle(
-                                      fontSize: 18, fontWeight: FontWeight.w700),
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w700,
+                                  ),
                                 ),
-                                child: const Text("Pickup Verified"),
+                                child: _isVerifying
+                                    ? const SizedBox(
+                                  width: 22,
+                                  height: 22,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  ),
+                                )
+                                    : Text(_isVerifying ? "Pickup Already Verified" : "Verify Pickup",
+                                    style: TextStyle(
+                                        fontSize: 16,
+                                        color: Colors.white)
+                                ),
                               ),
                             ),
                           ],
@@ -298,7 +319,55 @@ class _PickupConfirmationPageState extends State<PickupConfirmationPage> {
     );
   }
 
-  void performPickupAction(String deliveryId) {
-    VerificationService().verifyPickup(deliveryId);
+  void performPickupAction(String deliveryId) async {
+    setState(() {
+      _isVerifying = true;
+      _errorMessage = null;
+    });
+
+    final currentUser = await AuthService.getCurrentUser();
+    if (currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("❌ No current user found"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+
+    try {
+      await VerificationService().verifyPickup(
+        deliveryId,
+        "VALID_QR_STRING", // replace with scanned QR later
+        currentUser.id,
+        currentUser.staffName,
+      );
+
+      setState(() {
+        _isVerifying = false;
+        _verified = true;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Pickup Verified Successfully"),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      setState(() {
+        _isVerifying = false;
+        _errorMessage = e.toString();
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Error: $e"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 }
