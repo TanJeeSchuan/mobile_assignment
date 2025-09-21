@@ -4,6 +4,8 @@ import 'package:mobile_assignment/AppColors.dart';
 import 'package:mobile_assignment/models/Delivery.dart';
 import 'package:mobile_assignment/service/DeliveryService.dart';
 
+import 'GeneralWidgets.dart';
+
 class VerificationSummary extends StatelessWidget {
   final String deliveryId;
   bool showingPickup = true;
@@ -69,6 +71,7 @@ class VerificationSummary extends StatelessWidget {
 
         return Scaffold(
           appBar: AppBar(
+            automaticallyImplyLeading: false,
             title: const Text("Delivery Verified"),
             backgroundColor: AppColors.accentColor,
           ),
@@ -105,22 +108,32 @@ class VerificationSummary extends StatelessWidget {
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Row(
-                      children: proofUrls.map((url) {
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: Image.network(
-                            url,
-                            width: 80,
-                            height: 80,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => const Icon(
-                              Icons.broken_image,
-                              size: 40,
-                              color: Colors.red,
-                            ),
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: List.generate(
+                        proofUrls.length,
+                            (index) => Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: ImageWithPreviewUrl(
+                            imageUrl: proofUrls[index],
                           ),
-                        );
-                      }).toList(),
+                        ),
+                      ),
+                      // children: proofUrls.map((url) {
+                      //   return Padding(
+                      //     padding: const EdgeInsets.only(right: 8),
+                      //     child: Image.network(
+                      //       url,
+                      //       width: 80,
+                      //       height: 80,
+                      //       fit: BoxFit.cover,
+                      //       errorBuilder: (_, __, ___) => const Icon(
+                      //         Icons.broken_image,
+                      //         size: 40,
+                      //         color: Colors.red,
+                      //       ),
+                      //     ),
+                      //   );
+                      // }).toList(),
                     ),
                   ),
                   const SizedBox(height: 30),

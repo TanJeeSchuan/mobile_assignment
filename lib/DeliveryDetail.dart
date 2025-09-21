@@ -403,16 +403,16 @@ class AttachmentsFrame extends StatelessWidget{
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: List.generate(
-                    attachments.length,
-                    (index) => Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: ImageWithPreviewUrl(
-                        imageUrl: attachments[index].downloadUrl,
-                      ),
+                  attachments.length,
+                  (index) => Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: ImageWithPreviewUrl(
+                      imageUrl: attachments[index].downloadUrl,
                     ),
                   ),
                 ),
               ),
+            ),
 
           // ListView.builder(
           //   scrollDirection: Axis.horizontal,
