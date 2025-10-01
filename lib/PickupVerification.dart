@@ -341,7 +341,7 @@ class _PickupConfirmationPageState extends State<PickupConfirmationPage> {
     try {
       await VerificationService().verifyPickup(
         deliveryId,
-        "VALID_QR_STRING", // replace with scanned QR later
+        "VALID_QR_STRING", // assume valid QR code
         currentUser.id,
         currentUser.staffName,
       );

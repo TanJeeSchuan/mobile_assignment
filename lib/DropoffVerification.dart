@@ -124,46 +124,6 @@ class _DropoffVerificationState extends State<DropoffVerification> {
     }
   }
 
-  /// Success animation
-  Future<void> _showSuccessAnimation() async {
-    return showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) {
-        Future.delayed(const Duration(seconds: 2), () {
-          if (Navigator.of(context).canPop()) Navigator.of(context).pop();
-        });
-
-        return Dialog(
-          backgroundColor: Colors.transparent,
-          child: SizedBox(
-            width: 150,
-            height: 150,
-            child: Center(
-              child: TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0, end: 1),
-                duration: const Duration(milliseconds: 800),
-                builder: (context, value, child) {
-                  return Transform.scale(
-                    scale: value,
-                    child: child,
-                  );
-                },
-                child: Container(
-                  decoration: const BoxDecoration(
-                    color: Colors.green,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.check, color: Colors.white, size: 80),
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
   /// Submit confirmation
   Future<void> _submitConfirmation(String deliveryId, String stageName) async {
     setState(() {
@@ -251,7 +211,7 @@ class _DropoffVerificationState extends State<DropoffVerification> {
       setState(() => _isSubmitting = false);
     }
 
-    // return to dashboard
+    // return to verification confirmation
     if(mounted) {
       context.go("/home/deliveryDetail/$deliveryId/dropoffVerification/verified");
     }

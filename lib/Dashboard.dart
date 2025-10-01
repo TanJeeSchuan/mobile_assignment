@@ -74,6 +74,22 @@ class _DeliveryListState extends State<DeliveryList> with AutomaticKeepAliveClie
 
   String selectedFilter = "All";
 
+  Future<List<DeliverySummary>> fetchDeliveries() async {
+    final deliveries = await service.fetchDeliveries();
+
+    // // sort by deliverBy (assuming deliverBy is a String or DateTime)
+    // deliveries.sort((a, b) {
+    //   final aDate = a.deliverBy;
+    //   final bDate = b.deliverBy;
+    //   if (aDate == null && bDate == null) return 0;
+    //   if (aDate == null) return -1; // put invalid/empty at bottom
+    //   if (bDate == null) return 1;
+    //   return aDate.compareTo(bDate);
+    // });
+
+    return deliveries;
+  }
+
   // previously private; make public and return Future so callers can await
   Future<void> refresh() async {
     if (!mounted) return;
@@ -81,7 +97,8 @@ class _DeliveryListState extends State<DeliveryList> with AutomaticKeepAliveClie
     debugPrint('[DeliveryList] refresh() called');
     setState(() {
       // assign a *new* future so FutureBuilder notices change
-      ordersFuture = service.fetchDeliveries();
+      //ordersFuture = service.fetchDeliveries();
+      ordersFuture = fetchDeliveries as Future<List<DeliverySummary>>;
     });
     try {
       await ordersFuture; // await so caller can wait until complete
@@ -114,7 +131,8 @@ class _DeliveryListState extends State<DeliveryList> with AutomaticKeepAliveClie
   void initState() {
     super.initState();
     service = DeliveryService();
-    ordersFuture = service.fetchDeliveries(); // only once
+    //ordersFuture = service.fetchDeliveries(); // only once
+    ordersFuture = fetchDeliveries();
   }
 
 
